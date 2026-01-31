@@ -1,0 +1,22 @@
+{
+  "game_state": {
+    "current_level": 0,
+    "game_time": 0.0,
+    "is_paused": false,
+    "game_days": 0
+  },
+  "player_state": {
+    "gold": 0,
+    "experience": 0,
+    "level": 0
+  },
+  "squad_state": {
+    "characters": {},
+    "squads": {},
+    "squad_order": [],
+    "selected_character": null,
+    "next_id": 1,
+    "next_squad_id": 1
+  },
+  "base_state": null
+}
