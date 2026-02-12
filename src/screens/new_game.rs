@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use bevy_immediate::{
-    Imm, ImmEntity,
+    Imm,
     attach::{BevyImmediateAttachPlugin, ImmediateAttach},
     ui::CapsUi,
 };
@@ -12,7 +12,7 @@ use crate::{
         scenarios::{apply_scenario, get_all_scenarios},
     },
     screens::Screen,
-    theme::{UiRoot, prelude::*, scroll::ScrollBarWidget},
+    theme::{UiRoot, prelude::*, scroll::ImmUiScrollExt},
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -48,23 +48,17 @@ impl ImmediateAttach<CapsUi> for NewGameScreen {
                     .flex_col().w_full().flex_grow().min_h(Val::Px(0.0)).gap(40.0).p(Val::Px(10.0)) // scenario-list styles
                     .add(|ui| {
                         ui.ch().scrollarea(
-                            Node {
-                                width: Val::Percent(100.0),
-                                flex_grow: 1.0,
-                                ..default()
-                            },
-                            Node {
-                                width: Val::Percent(100.0),
-                                flex_grow: 1.0,
-                                overflow: Overflow {
+                            |n| {
+                                n.width = Val::Percent(100.0);
+                                n.flex_grow = 1.0;
+                                n.flex_direction = FlexDirection::Column;
+                                n.align_items = AlignItems::Center;
+                                n.row_gap = Val::Px(10.0);
+                                n.overflow = Overflow {
                                     y: OverflowAxis::Scroll,
                                     ..default()
-                                },
-                                flex_direction: FlexDirection::Column,
-                                ..default()
+                                };
                             },
-                            (),
-
                             |scroll_ui| {
                                 for scenario in get_all_scenarios() {
                                     // Scenario Card
@@ -104,7 +98,7 @@ impl ImmediateAttach<CapsUi> for NewGameScreen {
                                                       mut squad: ResMut<SquadState>,
                                                       mut screen: ResMut<NextState<Screen>>| {
 
-                                                    apply_scenario(&s, &mut game, &mut player, &mut squad);
+                                                    apply_scenario(&mut commands, &s, &mut game, &mut player, &mut squad);
                                                     screen.set(Screen::Gameplay);
                                                 })
                                         .add(|ui| { ui.ch().label("Start"); });
@@ -112,9 +106,8 @@ impl ImmediateAttach<CapsUi> for NewGameScreen {
                         }
                     });
 
-                // Back Button
-
-                    ui.ch().button()
+                    ui.ch().flex_col().w_full().items_center().button()
+                        .w(Val::Px(200.0))
                         .on_click_once(go_back)
                         .add(|ui| { ui.ch().label("Back to Main Menu").text_color(Color::WHITE); });
             });

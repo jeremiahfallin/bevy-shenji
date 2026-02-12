@@ -10,7 +10,7 @@ use bevy_immediate::{
 
 use crate::{
     asset_tracking::ResourceHandles,
-    game::save::LoadGameEvent,
+    game::save::LoadGameMessage,
     menus::Menu,
     screens::Screen,
     theme::{UiRoot, prelude::*},
@@ -35,64 +35,89 @@ impl ImmediateAttach<CapsUi> for MainMenu {
 
     fn construct(ui: &mut Imm<CapsUi>, _: &mut ()) {
         // Buttons
-        ui.ch()
-            .button()
-            .on_click_once(on_new_game_button)
-            .add(|ui| {
-                ui.ch().label("New Game");
-            });
+        ui.ch().style(style_main_menu_panel).add(|ui| {
+            ui.ch()
+                .button()
+                .style(|n| {
+                    n.width = Val::Px(240.0);
+                })
+                .on_click_once(on_new_game_button)
+                .add(|ui| {
+                    ui.ch().label("New Game");
+                });
 
-        ui.ch()
-            .button()
-            .on_spawn_insert(|| LoadGameButton)
-            .add(|ui| {
-                ui.ch().label("Load Game");
-            });
+            ui.ch()
+                .button()
+                .style(|n| {
+                    n.width = Val::Px(240.0);
+                })
+                .on_spawn_insert(|| LoadGameButton)
+                .add(|ui| {
+                    ui.ch().label("Load Game");
+                });
 
-        ui.ch()
-            .button()
-            .on_click_once(open_settings_menu)
-            .add(|ui| {
-                ui.ch().label("Settings");
-            });
+            ui.ch()
+                .button()
+                .style(|n| {
+                    n.width = Val::Px(240.0);
+                })
+                .on_click_once(open_settings_menu)
+                .add(|ui| {
+                    ui.ch().label("Settings");
+                });
 
-        ui.ch().button().on_click_once(open_credits_menu).add(|ui| {
-            ui.ch().label("Credits");
+            ui.ch()
+                .button()
+                .style(|n| {
+                    n.width = Val::Px(240.0);
+                })
+                .on_click_once(open_credits_menu)
+                .add(|ui| {
+                    ui.ch().label("Credits");
+                });
+
+            // Conditional "Exit" button (Not needed on Web)
+            #[cfg(not(target_family = "wasm"))]
+            {
+                ui.ch()
+                    .button()
+                    .style(|n| {
+                        n.width = Val::Px(240.0);
+                    })
+                    .on_click_once(exit_app)
+                    .add(|ui| {
+                        ui.ch().label("Exit");
+                    });
+            }
         });
-
-        // Conditional "Exit" button (Not needed on Web)
-        #[cfg(not(target_family = "wasm"))]
-        {
-            ui.ch().button().on_click_once(exit_app).add(|ui| {
-                ui.ch().label("Exit");
-            });
-        }
     }
+}
+
+fn style_main_menu_panel(n: &mut Node) {
+    n.width = Val::Auto;
+    n.height = Val::Auto;
+    n.flex_direction = FlexDirection::Column;
+    n.align_items = AlignItems::Center;
+    n.justify_content = JustifyContent::Center;
+    n.row_gap = Val::Px(10.0);
+
+    n.padding = UiRect {
+        left: Val::Px(90.0),
+        right: Val::Px(90.0),
+        top: Val::Px(25.0),
+        bottom: Val::Px(40.0),
+    };
 }
 
 fn spawn_main_menu(mut commands: Commands, ui_root: Res<UiRoot>) {
     let menu = commands
         .spawn((
             MainMenu,
-            (
-                Name::new("Main Menu"),
-                Node {
-                    width: Val::Auto,
-                    height: Val::Auto,
-                    padding: UiRect {
-                        left: Val::Px(90.0),
-                        right: Val::Px(90.0),
-                        top: Val::Px(25.0),
-                        bottom: Val::Px(40.0),
-                    },
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-                BackgroundColor(Color::srgb_u8(39, 58, 66)),
-                BorderRadius::all(Val::Px(2.0)),
-            ),
+            Name::new("Main Menu"),
+            Node::default(),
+            Visibility::default(),
+            InheritedVisibility::default(),
+            ViewVisibility::default(),
             DespawnOnExit(Menu::Main),
         ))
         .id();
@@ -126,13 +151,9 @@ fn on_load_game_button(
     resource_handles: Res<ResourceHandles>,
     mut next_screen: ResMut<NextState<Screen>>,
     mut target_screen: ResMut<TargetScreen>,
-    mut load_game_writer: MessageWriter<LoadGameEvent>,
+    mut load_game_writer: MessageWriter<LoadGameMessage>,
 ) {
-    load_game_writer.write(LoadGameEvent("autosave".to_string()));
-
-    // Also try to load "save1" if autosave doesn't exist?
-    // For now we just trigger the load. The system will error if file not found but we still switch screen.
-    // Ideally we should check if file exists, but let's stick to the request.
+    load_game_writer.write(LoadGameMessage("autosave".to_string()));
 
     target_screen.0 = Screen::Gameplay;
     if resource_handles.is_all_done() {

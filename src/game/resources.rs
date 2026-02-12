@@ -1,4 +1,3 @@
-use super::character::Character;
 use bevy::{platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize};
 
@@ -38,7 +37,7 @@ pub struct Squad {
 #[reflect(Resource)]
 pub struct SquadState {
     /// All characters in the game, keyed by their ID
-    pub characters: HashMap<String, Character>,
+    pub characters: HashMap<String, Entity>,
     /// Squads keyed by their ID
     pub squads: HashMap<u16, Squad>,
     /// Order of squads to display
@@ -65,12 +64,8 @@ impl Default for SquadState {
 }
 
 impl SquadState {
-    pub fn add_character(&mut self, mut character: Character) -> String {
-        let id = format!("char_{}", self.next_id);
-        self.next_id += 1;
-        character.id = id.clone();
-        self.characters.insert(id.clone(), character);
-        id
+    pub fn add_character(&mut self, id: String, entity: Entity) {
+        self.characters.insert(id, entity);
     }
 
     pub fn select_character(&mut self, character_id: String) {
@@ -91,16 +86,12 @@ impl SquadState {
         }
     }
 
-    pub fn assign_to_squad(&mut self, character_id: &str, squad_id: u16) {
-        if let Some(character) = self.characters.get_mut(character_id) {
-            character.add_to_squad(squad_id);
+    pub fn add_member_to_squad(&mut self, character_id: &str, squad_id: u16) {
+        self.get_or_create_squad(squad_id);
 
-            self.get_or_create_squad(squad_id);
-
-            if let Some(squad) = self.squads.get_mut(&squad_id) {
-                if !squad.members.iter().any(|m| m == character_id) {
-                    squad.members.push(character_id.to_string());
-                }
+        if let Some(squad) = self.squads.get_mut(&squad_id) {
+            if !squad.members.iter().any(|m| m == character_id) {
+                squad.members.push(character_id.to_string());
             }
         }
     }

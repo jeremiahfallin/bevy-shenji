@@ -1,7 +1,4 @@
-use super::{
-    character::Character,
-    resources::{GameState, PlayerState, SquadState},
-};
+use super::resources::{GameState, PlayerState, SquadState};
 use bevy::prelude::*;
 
 #[derive(Debug, Clone)]
@@ -63,6 +60,7 @@ pub fn get_all_scenarios() -> Vec<Scenario> {
 }
 
 pub fn apply_scenario(
+    commands: &mut Commands,
     scenario: &Scenario,
     game_state: &mut GameState,
     player_state: &mut PlayerState,
@@ -78,17 +76,28 @@ pub fn apply_scenario(
     *squad_state = SquadState::default();
 
     for template in &scenario.starting_characters {
-        let character = Character::new(
-            String::new(),
+        // Generate a new ID for the character
+        let id = format!("char_{}", squad_state.next_id);
+        squad_state.next_id += 1;
+
+        // Create the bundle
+        let bundle = super::character::CharacterBundle::new(
+            id.clone(),
             template.name.clone(),
             template.race.clone(),
             template.subrace.clone(),
             "Home Base".to_string(),
         );
 
-        let character_id = squad_state.add_character(character);
+        // Spawn the entity
+        let entity = commands.spawn(bundle).id();
+
+        // Register in SquadState
+        squad_state.add_character(id.clone(), entity);
+
+        // Assign to squad if needed
         if template.starting_squad > 0 {
-            squad_state.assign_to_squad(&character_id, template.starting_squad);
+            squad_state.add_member_to_squad(&id, template.starting_squad);
         }
     }
 }

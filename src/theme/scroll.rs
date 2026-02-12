@@ -1,285 +1,116 @@
-use bevy::picking::events::{Drag, DragStart, Pointer, Scroll};
-use bevy::picking::hover::Hovered;
+use bevy::picking::events::{Pointer, Scroll};
 use bevy::prelude::*;
-use bevy::ui_widgets::{
-    ControlOrientation, CoreScrollbarDragState, CoreScrollbarThumb, Scrollbar, ScrollbarPlugin,
-};
-use bevy_immediate::{CapSet, Imm, ImmEntity};
+use bevy_immediate::{CapSet, Imm, ImmEntity, ImplCap};
 
-// 1. THE PLUGIN
-// Add this to your main app to enable scrolling logic
+use crate::theme::primitives::{
+    style::{CapabilityUiLayout, ImmUiStyleExt},
+    visuals::CapabilityUiVisuals,
+};
+
+// 1. COMPONENTS
+#[derive(Component, Default)]
+pub struct UiScrollPosition {
+    pub x: f32,
+    pub y: f32,
+}
+
+#[derive(Component)]
+pub struct ScrollableContent;
+
+// 2. PLUGIN
 pub struct ScrollWidgetPlugin;
 
 impl Plugin for ScrollWidgetPlugin {
     fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<ScrollbarPlugin>() {
-            app.add_plugins(ScrollbarPlugin);
-        }
-
-        // This system handles the visual color change of the scrollbar
-        app.add_systems(Update, update_scrollbar_style_on_drag);
-
-        // This observer attaches input logic whenever you create a scroll area
-        app.add_observer(
-            |event: On<bevy::ecs::lifecycle::Add, ScrollableContent>, mut commands: Commands| {
-                commands
-                    .entity(event.event().entity)
-                    .insert(ScrollState::default())
-                    .observe(scroll_on_mouse)
-                    .observe(scroll_on_drag_start)
-                    .observe(scroll_on_drag);
-            },
-        );
+        // 1. Listen for new scroll areas to attach input handlers
+        app.add_observer(attach_scroll_handlers);
+        // 2. Update the visual layout based on scroll position every frame
+        app.add_systems(Update, update_scroll_layout);
     }
 }
 
-// 2. COMPONENTS
-#[derive(Component)]
-pub struct ScrollableContent; // Marker for the content area
+// 3. SYSTEMS & OBSERVERS
 
-#[derive(Component, Default)]
-struct ScrollState {
-    initial_pos: Vec2,
+// Triggered when 'ScrollableContent' is added to an entity
+fn attach_scroll_handlers(trigger: On<Add, ScrollableContent>, mut commands: Commands) {
+    commands.entity(trigger.entity).observe(on_scroll_event);
 }
 
-// 3. THE TRAIT (The "API")
-// This allows you to call .scrollarea() on your UI builder
-pub trait ScrollBarWidget<Caps: CapSet> {
+// Triggered when the mouse wheel is scrolled over the entity
+fn on_scroll_event(trigger: On<Pointer<Scroll>>, mut query: Query<&mut UiScrollPosition>) {
+    if let Ok(mut scroll) = query.get_mut(trigger.entity) {
+        // Adjust sensitivity (pixels per scroll line)
+        const SCROLL_SENSITIVITY: f32 = 40.0;
+
+        scroll.x -= trigger.event().x * SCROLL_SENSITIVITY;
+        scroll.y -= trigger.event().y * SCROLL_SENSITIVITY;
+
+        // Clamp to 0.0 (prevents scrolling past the top)
+        // Note: For full clamping (bottom), we'd need ComputedNode size,
+        // which is complex in immediate mode. For now, we allow infinite scroll down.
+        scroll.x = scroll.x.max(0.0);
+        scroll.y = scroll.y.max(0.0);
+    }
+}
+
+// Syncs the abstract ScrollPosition to the actual UI Node style
+fn update_scroll_layout(
+    mut query: Query<(&UiScrollPosition, &mut Node), Changed<UiScrollPosition>>,
+) {
+    for (pos, mut node) in query.iter_mut() {
+        // Move the content up/left by the scroll amount
+        node.left = Val::Px(-pos.x);
+        node.top = Val::Px(-pos.y);
+    }
+}
+
+// 4. THE FLUENT API
+
+pub trait ImmUiScrollExt<Cap> {
     fn scrollarea(
         self,
-        outer_node_style: Node,
-        content_node_style: Node,
-        content_bundle: impl Bundle,
-        content: impl FnOnce(&mut Imm<'_, '_, Caps>),
+        inner_style_fn: impl FnOnce(&mut Node),
+        content: impl FnOnce(&mut Imm<'_, '_, Cap>),
     ) -> Self;
+
+    fn scroll_view(self, content: impl FnOnce(&mut Imm<'_, '_, Cap>)) -> Self;
 }
 
-impl<Caps> ScrollBarWidget<Caps> for ImmEntity<'_, '_, '_, Caps>
+impl<'w, 's, 'a, Cap> ImmUiScrollExt<Cap> for ImmEntity<'w, 's, 'a, Cap>
 where
-    Caps: CapSet,
+    Cap: CapSet + ImplCap<CapabilityUiLayout> + ImplCap<CapabilityUiVisuals>,
 {
     fn scrollarea(
         self,
-        outer_node_style: Node,
-        content_node_style: Node,
-        content_bundle: impl Bundle,
-        content: impl FnOnce(&mut Imm<'_, '_, Caps>),
+        inner_style_fn: impl FnOnce(&mut Node),
+        content: impl FnOnce(&mut Imm<'_, '_, Cap>),
     ) -> Self {
-        let grid_template = |scrollbar: bool| {
-            if scrollbar {
-                vec![RepeatedGridTrack::flex(1, 1.), RepeatedGridTrack::auto(1)]
-            } else {
-                vec![RepeatedGridTrack::flex(1, 1.)]
-            }
-        };
-
-        let horizontal = content_node_style.overflow.x == OverflowAxis::Scroll;
-        let vertical = content_node_style.overflow.y == OverflowAxis::Scroll;
-
-        self.on_spawn_insert(|| {
-            (
-                Node {
-                    display: Display::Grid,
-                    grid_template_columns: grid_template(horizontal),
-                    grid_template_rows: grid_template(vertical),
-
-                    // Use all remaining values from user provided style
-                    ..outer_node_style
-                },
-                Visibility::default(),
-                InheritedVisibility::default(),
-                ViewVisibility::default(),
-            )
-        })
-        .add(|ui| {
-            let mut scrollarea_content = ui.ch().on_spawn_insert(|| {
-                (
-                    content_node_style,
-                    ScrollPosition(Vec2::ZERO),
-                    // FIX: Use the public component that the Plugin is listening for
-                    ScrollableContent,
-                    content_bundle,
-                    Visibility::default(),
-                    InheritedVisibility::default(),
-                    ViewVisibility::default(),
-                )
-            });
-
-            // Store entity for scrollable content area
-            let scrollbar_target = scrollarea_content.entity();
-
-            // Finalize construction of scrollarea entity
-            scrollarea_content.add(content);
-
-            if vertical {
-                // Vertical scrollbar
-                ui.ch().on_spawn_insert(|| {
-                    (
-                        Node {
-                            width: px(8),
-                            grid_row: GridPlacement::start(1),
-                            grid_column: GridPlacement::start(2),
-                            ..default()
-                        },
-                        Scrollbar {
-                            orientation: ControlOrientation::Vertical,
-                            target: scrollbar_target,
-                            min_thumb_length: 8.0,
-                        },
-                        Children::spawn(Spawn((
-                            Node {
-                                position_type: PositionType::Absolute,
-                                ..default()
-                            },
-                            Hovered::default(),
-                            BackgroundColor(colors::GRAY2.into()),
-                            BorderRadius::all(px(4)),
-                            CoreScrollbarThumb,
-                        ))),
-                        Visibility::default(),
-                        InheritedVisibility::default(),
-                        ViewVisibility::default(),
-                    )
-                });
-            }
-
-            if horizontal {
-                // Horizontal scrollbar
-                ui.ch().on_spawn_insert(|| {
-                    (
-                        Node {
-                            min_height: px(8),
-                            grid_row: GridPlacement::start(2),
-                            grid_column: GridPlacement::start(1),
-                            ..default()
-                        },
-                        Scrollbar {
-                            orientation: ControlOrientation::Horizontal,
-                            target: scrollbar_target,
-                            min_thumb_length: 8.0,
-                        },
-                        Children::spawn(Spawn((
-                            Node {
-                                position_type: PositionType::Absolute,
-                                ..default()
-                            },
-                            Hovered::default(),
-                            BackgroundColor(colors::GRAY2.into()),
-                            BorderRadius::all(px(4)),
-                            CoreScrollbarThumb,
-                        ))),
-                        Visibility::default(),
-                        InheritedVisibility::default(),
-                        ViewVisibility::default(),
-                    )
-                });
-            }
-        })
+        self
+            // Outer Container (The Window)
+            .style(|n| {
+                n.display = Display::Grid;
+                // Single cell grid ensures content overlaps/fills correctly
+                n.grid_template_columns = vec![GridTrack::flex(1.0)];
+                n.grid_template_rows = vec![GridTrack::flex(1.0)];
+                // Critical: Clip content that moves outside
+                n.overflow = Overflow::clip();
+            })
+            .add(|ui| {
+                // Inner Container (The Moving Content)
+                ui.ch()
+                    .style(inner_style_fn)
+                    .on_spawn_insert(|| (UiScrollPosition::default(), ScrollableContent))
+                    .add(content);
+            })
     }
-}
 
-// 4. THE SYSTEMS
-
-fn scroll_on_mouse(
-    scroll: On<Pointer<Scroll>>,
-    // FIX: Query for ScrollableContent instead of MyScrollableNode
-    mut scroll_position_query: Query<(&mut ScrollPosition, &ComputedNode), With<ScrollableContent>>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-) {
-    if let Ok((mut scroll_position, node)) = scroll_position_query.get_mut(scroll.entity) {
-        let visible_size = node.size() * node.inverse_scale_factor;
-        let content_size = node.content_size() * node.inverse_scale_factor;
-        let max_range = (content_size - visible_size).max(Vec2::ZERO);
-
-        let mut delta = Vec2::new(scroll.x, scroll.y);
-
-        if keyboard_input.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) {
-            std::mem::swap(&mut delta.x, &mut delta.y);
-        }
-
-        let inverse_scale_factor: f32 = node.inverse_scale_factor;
-
-        match scroll.unit {
-            bevy::input::mouse::MouseScrollUnit::Line => {
-                delta *= 28.;
-            }
-            bevy::input::mouse::MouseScrollUnit::Pixel => {
-                delta *= 1.0 / inverse_scale_factor.max(0.0001);
-            }
-        }
-
-        scroll_position.0 = (scroll_position.0 - delta).min(max_range).max(Vec2::ZERO);
+    fn scroll_view(self, content: impl FnOnce(&mut Imm<'_, '_, Cap>)) -> Self {
+        self.scrollarea(
+            |n| {
+                n.display = Display::Flex;
+                n.flex_direction = FlexDirection::Column;
+            },
+            content,
+        )
     }
-}
-
-fn scroll_on_drag_start(
-    mut drag_start: On<Pointer<DragStart>>,
-    // FIX: Query for ScrollableContent
-    mut scroll_position_query: Query<(&ComputedNode, &mut ScrollState), With<ScrollableContent>>,
-) {
-    if let Ok((computed_node, mut state)) = scroll_position_query.get_mut(drag_start.entity) {
-        drag_start.propagate(false);
-        state.initial_pos = computed_node.scroll_position;
-    }
-}
-
-fn scroll_on_drag(
-    mut drag: On<Pointer<Drag>>,
-    ui_scale: Res<UiScale>,
-    // FIX: Query for ScrollableContent
-    mut scroll_position_query: Query<
-        (&mut ScrollPosition, &ComputedNode, &ScrollState),
-        With<ScrollableContent>,
-    >,
-) {
-    if let Ok((mut scroll_position, comp_node, state)) = scroll_position_query.get_mut(drag.entity)
-    {
-        let visible_size = comp_node.size();
-        let content_size = comp_node.content_size();
-
-        drag.propagate(false);
-
-        let max_range = (content_size - visible_size).max(Vec2::ZERO);
-
-        // Convert from screen coordinates to UI coordinates then back to physical coordinates
-        let distance = drag.distance / (comp_node.inverse_scale_factor * ui_scale.0);
-
-        scroll_position.0 = ((state.initial_pos - distance)
-            .min(max_range)
-            .max(Vec2::ZERO))
-            * comp_node.inverse_scale_factor;
-    }
-}
-
-// Update the color of the scrollbar thumb.
-#[allow(clippy::type_complexity)]
-fn update_scrollbar_style_on_drag(
-    mut q_thumb: Query<
-        (&mut BackgroundColor, &Hovered, &CoreScrollbarDragState),
-        (
-            With<CoreScrollbarThumb>,
-            Or<(Changed<Hovered>, Changed<CoreScrollbarDragState>)>,
-        ),
-    >,
-) {
-    for (mut thumb_bg, Hovered(is_hovering), drag) in q_thumb.iter_mut() {
-        let color: Color = if *is_hovering || drag.dragging {
-            colors::GRAY3
-        } else {
-            colors::GRAY2
-        }
-        .into();
-
-        if thumb_bg.0 != color {
-            thumb_bg.0 = color;
-        }
-    }
-}
-
-mod colors {
-    use bevy::color::Srgba;
-
-    pub const GRAY1: Srgba = Srgba::new(0.224, 0.224, 0.243, 1.0);
-    pub const GRAY2: Srgba = Srgba::new(0.486, 0.486, 0.529, 1.0);
-    pub const GRAY3: Srgba = Srgba::new(1.0, 1.0, 1.0, 1.0);
 }

@@ -1,8 +1,8 @@
 use bevy::prelude::*;
-use bevy::{color::Color, ecs::component::Component, ui::BackgroundColor};
+use bevy::{color::Color, ui::BackgroundColor};
 
 use bevy_immediate::ui::base::CapabilityUiBase;
-use bevy_immediate::{CapSet, ImmCapAccessRequests, ImmCapability, ImmEntity, ImplCap};
+use bevy_immediate::{CapSet, ImmEntity, ImplCap};
 
 use crate::theme::components::list::{List, ListItem};
 use crate::theme::prelude::*;
@@ -10,10 +10,7 @@ use crate::theme::widgets::label::{FontWeight, LabelSize};
 use bevy_immediate::Imm;
 
 // Re-export from primitives
-pub use crate::theme::primitives::{
-    CapabilityUiLayout, CapabilityUiTextStyle, CapabilityUiVisuals, ImmUiLayout,
-    ImmUiTextStyleExtension, ImmUiVisuals,
-};
+pub use crate::theme::primitives::{CapabilityUiLayout, CapabilityUiTextStyle, ImmUiLayout};
 
 pub struct ExtensionPlugin;
 

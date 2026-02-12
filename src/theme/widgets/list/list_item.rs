@@ -114,8 +114,7 @@ impl<'a, Cap: CapSet> ListItem<'a, Cap> {
             + ImplCap<CapabilityUiBase>
             + ImplCap<CapabilityUiText>,
     {
-        let mut container = ui.ch();
-        let mut container_entity = container;
+        let mut container_entity = ui.ch();
 
         container_entity.add(|ui| {
             if let Some(start_slot) = self.start_slot {

@@ -34,5 +34,10 @@ pub fn style_card<'w, 's, 'a, Cap>(entity: ImmEntity<'w, 's, 'a, Cap>) -> ImmEnt
 where
     Cap: CapSet + ImplCap<CapabilityUiVisuals> + ImplCap<CapabilityUiLayout>,
 {
-    entity.p(Val::Px(10.0)).rounded(8.0).bg(GRAY_700)
+    entity
+        .flex_col()
+        .w(Val::Percent(50.0))
+        .p(Val::Px(10.0))
+        .rounded(8.0)
+        .bg(GRAY_700)
 }

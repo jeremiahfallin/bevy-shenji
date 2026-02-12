@@ -1,8 +1,6 @@
 use super::palette::*;
 use crate::theme::prelude::*;
 use bevy::prelude::*;
-use bevy_immediate::ui::base::CapabilityUiBase;
-use bevy_immediate::ui::text::CapabilityUiText;
 use bevy_immediate::{CapSet, ImmEntity, ImplCap};
 
 /// Applies the visual style of a Primary Button.
@@ -28,7 +26,6 @@ where
         .font_bold()
 }
 
-/// Applies the hover style.
 pub fn style_btn_primary_hover<'w, 's, 'a, Cap>(
     entity: ImmEntity<'w, 's, 'a, Cap>,
 ) -> ImmEntity<'w, 's, 'a, Cap>

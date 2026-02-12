@@ -1,12 +1,17 @@
 use bevy::{ecs::system::IntoObserverSystem, prelude::*};
 use bevy_immediate::{CapSet, ImmCapAccessRequests, ImmCapability, ImmEntity, ImplCap};
 
+use crate::theme::resources::LucideAssets;
+use crate::theme::widgets::icon::LucideIcon;
 use crate::{asset_tracking::LoadResource, audio::sound_effect};
 
 pub(super) fn plugin(app: &mut App) {
+    app.init_resource::<LucideAssets>();
     app.load_resource::<InteractionAssets>();
     app.add_observer(play_on_hover_sound_effect);
     app.add_observer(play_on_click_sound_effect);
+    app.add_observer(apply_lucide_font);
+    app.add_systems(PostUpdate, enforce_lucide_font);
 }
 
 #[derive(Resource, Asset, Clone, Reflect)]
@@ -97,5 +102,27 @@ where
             self.entity_commands().observe(system).insert(HasObserver);
         }
         self
+    }
+}
+
+fn apply_lucide_font(
+    trigger: On<Add, LucideIcon>,
+    mut query: Query<&mut TextFont>,
+    lucide_assets: Res<LucideAssets>,
+) {
+    if let Ok(mut font) = query.get_mut(trigger.entity) {
+        font.font = lucide_assets.font.clone();
+    }
+}
+
+fn enforce_lucide_font(
+    mut query: Query<(&mut TextFont, &LucideIcon), Changed<TextFont>>,
+    lucide_assets: Res<LucideAssets>,
+) {
+    for (mut font, _) in &mut query {
+        // If the font got reset to something else (like default), force it back.
+        if font.font != lucide_assets.font {
+            font.font = lucide_assets.font.clone();
+        }
     }
 }

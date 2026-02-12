@@ -1,4 +1,7 @@
-use crate::game::{character::Character, resources::SquadState};
+use crate::game::{
+    character::{CharacterInfo, Health},
+    resources::SquadState,
+};
 use crate::theme::prelude::*;
 use bevy::prelude::*;
 
@@ -13,10 +16,10 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins(BevyImmediateAttachPlugin::<CapsUi, SquadsDisplay>::new());
 }
 
-pub fn render_character_card(ui: &mut Imm<CapsUi>, character: &Character) {
+pub fn render_character_card(ui: &mut Imm<CapsUi>, info: &CharacterInfo, health: &Health) {
     ui.ch()
         .flex_col()
-        .p(Val::Px(15.0))
+        .p(Val::Px(16.0))
         .bg(Color::srgba(0.12, 0.14, 0.16, 0.8))
         .rounded(8.0)
         .border(1.0)
@@ -24,10 +27,9 @@ pub fn render_character_card(ui: &mut Imm<CapsUi>, character: &Character) {
         .mb(Val::Px(10.0))
         .add(|ui| {
             // Name and basic info
-            ui.ch().header(&character.name);
-            ui.ch()
-                .label(format!("{} - {}", character.race, character.subrace));
-            ui.ch().label(format!("Location: {}", character.location));
+            ui.ch().header(&info.name);
+            ui.ch().label(format!("{} - {}", info.race, info.subrace));
+            ui.ch().label(format!("Location: {}", info.location));
 
             ui.ch().on_spawn_insert(|| {
                 (
@@ -42,7 +44,6 @@ pub fn render_character_card(ui: &mut Imm<CapsUi>, character: &Character) {
 
             // Stats or Health brief
             ui.ch().sub_header("Health");
-            let health = character.health;
 
             // Helper to show limb health
             let mut limb_row = |name: &str, value: u8| {
@@ -74,9 +75,18 @@ pub fn render_character_card(ui: &mut Imm<CapsUi>, character: &Character) {
 pub struct CharacterCard;
 
 impl ImmediateAttach<CapsUi> for CharacterCard {
-    type Params = Res<'static, SquadState>;
+    type Params = (
+        Res<'static, SquadState>,
+        Query<'static, 'static, (&'static CharacterInfo, &'static Health)>,
+    );
 
-    fn construct(ui: &mut Imm<CapsUi>, squad_state: &mut Res<SquadState>) {
+    fn construct(
+        ui: &mut Imm<CapsUi>,
+        (squad_state, characters): &mut <Self::Params as bevy::ecs::system::SystemParam>::Item<
+            '_,
+            '_,
+        >,
+    ) {
         ui.ch()
             .on_spawn_insert(|| Node {
                 display: Display::Flex,
@@ -90,12 +100,16 @@ impl ImmediateAttach<CapsUi> for CharacterCard {
                     return;
                 };
 
-                let Some(character) = squad_state.characters.get(selected_id) else {
+                let Some(&entity) = squad_state.characters.get(selected_id) else {
                     ui.ch().label("Character Not Found");
                     return;
                 };
 
-                render_character_card(ui, character);
+                if let Ok((info, health)) = characters.get(entity) {
+                    render_character_card(ui, info, health);
+                } else {
+                    ui.ch().label("Character missing data");
+                }
             });
     }
 }
@@ -104,9 +118,18 @@ impl ImmediateAttach<CapsUi> for CharacterCard {
 pub struct SquadsDisplay;
 
 impl ImmediateAttach<CapsUi> for SquadsDisplay {
-    type Params = Res<'static, SquadState>;
+    type Params = (
+        Res<'static, SquadState>,
+        Query<'static, 'static, (&'static CharacterInfo, &'static Health)>,
+    );
 
-    fn construct(ui: &mut Imm<CapsUi>, squad_state: &mut Res<SquadState>) {
+    fn construct(
+        ui: &mut Imm<CapsUi>,
+        (squad_state, characters): &mut <Self::Params as bevy::ecs::system::SystemParam>::Item<
+            '_,
+            '_,
+        >,
+    ) {
         ui.ch()
             .on_spawn_insert(|| Node {
                 display: Display::Flex,
@@ -138,9 +161,10 @@ impl ImmediateAttach<CapsUi> for SquadsDisplay {
                                     ui.ch().label("Empty Squad");
                                 } else {
                                     for char_id in &squad.members {
-                                        if let Some(character) = squad_state.characters.get(char_id)
-                                        {
-                                            render_character_card(ui, character);
+                                        if let Some(&entity) = squad_state.characters.get(char_id) {
+                                            if let Ok((info, health)) = characters.get(entity) {
+                                                render_character_card(ui, info, health);
+                                            }
                                         }
                                     }
                                 }

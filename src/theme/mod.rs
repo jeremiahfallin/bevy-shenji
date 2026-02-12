@@ -3,6 +3,7 @@ pub mod behaviors;
 pub mod components;
 pub mod extensions;
 pub mod primitives;
+pub mod resources;
 pub mod scroll;
 pub mod styles;
 pub mod widgets;
@@ -13,6 +14,7 @@ pub mod prelude {
     pub use super::components::*;
     pub use super::extensions::*;
     pub use super::primitives::*;
+    pub use super::resources::*;
     pub use super::scroll::*;
     pub use super::styles::buttons::*;
     pub use super::styles::containers::*;

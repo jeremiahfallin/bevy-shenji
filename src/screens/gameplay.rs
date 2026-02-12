@@ -10,7 +10,13 @@ use bevy_immediate::{
     ui::CapsUi,
 };
 
-use crate::{Pause, game::ui::spawn_game_layout, menus::Menu, screens::Screen, theme::UiRoot};
+use crate::{
+    Pause,
+    game::ui::spawn_game_layout,
+    menus::Menu,
+    screens::Screen,
+    theme::{UiRoot, prelude::*},
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
@@ -48,8 +54,12 @@ pub struct PauseOverlay;
 
 impl ImmediateAttach<CapsUi> for PauseOverlay {
     type Params = ();
+
     fn construct(ui: &mut Imm<CapsUi>, _: &mut ()) {
-        // No children, just the overlay style itself
+        ui.ch()
+            .w_full()
+            .h_full()
+            .bg(Color::srgba(0.0, 0.0, 0.0, 0.8));
     }
 }
 
@@ -58,14 +68,8 @@ fn spawn_pause_overlay(mut commands: Commands, ui_root: Res<UiRoot>) {
         .spawn((
             PauseOverlay,
             Name::new("Pause Overlay"),
-            (
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
-                BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
-            ),
+            Node::default(),
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
             DespawnOnExit(Pause(true)),
         ))
         .id();

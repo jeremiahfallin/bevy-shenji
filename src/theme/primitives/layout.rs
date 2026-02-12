@@ -1,8 +1,6 @@
 use bevy::prelude::*;
-use bevy::ui::{GridTrack, RepeatedGridTrack};
-use bevy_immediate::ui::CapsUi;
-use bevy_immediate::ui::base::CapabilityUiBase;
-use bevy_immediate::{CapSet, ImmCapAccessRequests, ImmCapability, ImmEntity, ImplCap};
+use bevy::ui::RepeatedGridTrack;
+use bevy_immediate::{ImmEntity, ImplCap};
 
 use super::style::{CapabilityUiLayout, ImmUiStyleExt};
 
@@ -201,7 +199,7 @@ where
     // --- Spacing (Padding) ---
     fn p(self, val: impl Into<Val>) -> Self {
         let v = val.into();
-        self.style(|s| s.padding = UiRect::all(v))
+        self.style(move |s| s.padding = UiRect::all(v))
     }
     fn px(self, val: impl Into<Val>) -> Self {
         let v = val.into();

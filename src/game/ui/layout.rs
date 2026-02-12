@@ -39,8 +39,7 @@ impl ImmediateAttach<CapsUi> for GameLayout {
                 .w_full()
                 .flex_grow()
                 .scroll_y()
-                .bg(Color::srgba(0.0, 0.0, 0.0, 0.2))
-                .p(Val::Px(20.0));
+                .bg(Color::srgba(0.0, 0.0, 0.0, 0.2));
             main_view.entity_commands().insert(Name::new("Main View"));
 
             main_view.add(|ui| {

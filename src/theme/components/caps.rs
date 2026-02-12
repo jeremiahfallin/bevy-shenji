@@ -1,8 +1,8 @@
+use crate::theme::primitives::image::CapabilityUiImage;
 use bevy::prelude::*;
 use bevy_immediate::ui::CapsUi;
 use bevy_immediate::ui::base::CapabilityUiBase;
 use bevy_immediate::ui::interaction::CapabilityUiInteraction;
-use bevy_immediate::ui::layout_order::CapabilityUiLayoutOrder;
 use bevy_immediate::ui::look::CapabilityUiLook;
 use bevy_immediate::ui::text::CapabilityUiText;
 use bevy_immediate::{CapSet, ImmCapAccessRequests, ImplCap};
@@ -30,6 +30,7 @@ impl ImplCap<CapabilityUiTextStyle> for ShenjiCaps {}
 impl ImplCap<CapabilityUiVisuals> for ShenjiCaps {}
 impl ImplCap<CapabilityButton> for ShenjiCaps {}
 impl ImplCap<CapabilityObserver> for ShenjiCaps {}
+impl ImplCap<CapabilityUiImage> for ShenjiCaps {}
 
 // Extend CapsUi (from bevy_immediate) with our local capabilities
 impl ImplCap<CapabilityObserver> for CapsUi {}

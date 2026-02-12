@@ -28,9 +28,6 @@ impl ImmediateAttach<CapsUi> for SettingsMenu {
     type Params = Res<'static, GlobalVolume>;
 
     fn construct(ui: &mut Imm<CapsUi>, global_volume: &mut Res<GlobalVolume>) {
-        // FIX: Removed the outer `ui.add(|ui| { ... })` wrapper.
-        // We can spawn children directly on the context.
-
         // Child 1: Header
         ui.ch().header("Settings");
 

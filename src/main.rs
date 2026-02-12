@@ -88,7 +88,6 @@ impl Plugin for AppPlugin {
                     row_gap: Val::Px(20.0),
                     ..default()
                 },
-                // IMPORTANT: Bevy 0.15 requires Visibility components for hierarchy to work correctly
                 Visibility::default(),
                 InheritedVisibility::default(),
                 ViewVisibility::default(),

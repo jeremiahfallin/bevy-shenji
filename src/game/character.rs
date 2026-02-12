@@ -13,6 +13,7 @@ pub struct Health {
     pub right_arm: u8,
     pub left_leg: u8,
     pub right_leg: u8,
+    pub hunger: u8,
 }
 
 #[derive(
@@ -67,40 +68,108 @@ pub struct Equipment {
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default, Reflect, Serialize, Deserialize)]
 #[reflect(Component)]
-pub struct Character {
+pub struct CharacterInfo {
     pub id: String,
     pub name: String,
     pub race: String,
     pub subrace: String,
     pub location: String,
+}
+
+#[derive(Component, Debug, Clone, PartialEq, Eq, Default, Reflect, Serialize, Deserialize)]
+#[reflect(Component)]
+pub struct Inventory {
+    pub items: HashMap<String, String>,
+}
+
+#[derive(
+    Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect, Serialize, Deserialize,
+)]
+#[reflect(Component)]
+pub struct Squad(pub u16);
+
+#[derive(Bundle)]
+pub struct CharacterBundle {
+    pub info: CharacterInfo,
     pub health: Health,
     pub skills: Skills,
     pub equipment: Equipment,
-    pub squad: u16,
-    pub inventory: HashMap<String, String>,
+    pub inventory: Inventory,
+    pub squad: Squad,
 }
 
-impl Character {
+impl Health {
+    pub fn iter(&self) -> impl Iterator<Item = (&'static str, u8)> {
+        [
+            ("Head", self.head),
+            ("Stomach", self.stomach),
+            ("Chest", self.chest),
+            ("Left Arm", self.left_arm),
+            ("Right Arm", self.right_arm),
+            ("Left Leg", self.left_leg),
+            ("Right Leg", self.right_leg),
+        ]
+        .into_iter()
+    }
+}
+
+impl Skills {
+    pub fn iter(&self) -> impl Iterator<Item = (&'static str, u8)> {
+        [
+            ("Armor Smith", self.armor_smith),
+            ("Assassination", self.assassination),
+            ("Athletics", self.athletics),
+            ("Blunt", self.blunt),
+            ("Cooking", self.cooking),
+            ("Crossbows", self.crossbows),
+            ("Crossbow Smith", self.crossbow_smith),
+            ("Dexterity", self.dexterity),
+            ("Dodge", self.dodge),
+            ("Engineer", self.engineer),
+            ("Farming", self.farming),
+            ("Hackers", self.hackers),
+            ("Heavy Weapons", self.heavy_weapons),
+            ("Katanas", self.katanas),
+            ("Labouring", self.labouring),
+            ("Lockpicking", self.lockpicking),
+            ("Martial Arts", self.martial_arts),
+            ("Medic", self.medic),
+            ("Melee Attack", self.melee_attack),
+            ("Melee Defense", self.melee_defense),
+            ("Perception", self.perception),
+            ("Polearms", self.polearms),
+            ("Robotics", self.robotics),
+            ("Sabres", self.sabres),
+            ("Science", self.science),
+            ("Scouting", self.scouting),
+            ("Stealth", self.stealth),
+            ("Strength", self.strength),
+            ("Thievery", self.thievery),
+            ("Toughness", self.toughness),
+            ("Turrets", self.turrets),
+            ("Weapon Smith", self.weapon_smith),
+        ]
+        .into_iter()
+    }
+}
+
+impl CharacterBundle {
     pub fn new(id: String, name: String, race: String, subrace: String, location: String) -> Self {
         Self {
-            id,
-            name,
-            race,
-            subrace,
-            location,
+            info: CharacterInfo {
+                id,
+                name,
+                race,
+                subrace,
+                location,
+            },
             health: Health::default(),
             skills: Skills::default(),
             equipment: Equipment::default(),
-            squad: 0,
-            inventory: HashMap::new(),
+            inventory: Inventory {
+                items: HashMap::new(),
+            },
+            squad: Squad(0),
         }
-    }
-
-    pub fn add_to_squad(&mut self, squad: u16) {
-        self.squad = squad;
-    }
-
-    pub fn remove_from_squad(&mut self) {
-        self.squad = 0;
     }
 }

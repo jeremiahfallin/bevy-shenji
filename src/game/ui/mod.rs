@@ -3,6 +3,7 @@ use bevy::prelude::*;
 pub mod bottom_bar;
 pub mod character;
 pub mod content;
+pub mod inspector;
 pub mod layout;
 pub mod sidebar;
 
