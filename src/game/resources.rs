@@ -1,6 +1,21 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Reflect, Serialize, Deserialize)]
+pub enum GameView {
+    #[default]
+    Dashboard,
+    Research,
+    Squads,
+    Characters,
+}
+
+#[derive(Resource, Default, Debug, Reflect)]
+#[reflect(Resource)]
+pub struct UiState {
+    pub active_view: GameView,
+}
+
 #[derive(Resource, Default, Debug, Reflect, Clone, Serialize, Deserialize)]
 #[reflect(Resource)]
 pub struct GameState {
@@ -108,6 +123,15 @@ pub struct BaseState {
     pub power: BasePower,
 }
 
+impl Default for BaseState {
+    fn default() -> Self {
+        Self {
+            value: BaseValues::default(),
+            power: BasePower::default(),
+        }
+    }
+}
+
 #[derive(Resource, Debug, Reflect, Clone, Serialize, Deserialize)]
 #[reflect(Resource)]
 pub struct BaseValues {
@@ -118,6 +142,18 @@ pub struct BaseValues {
     pub tech_level: u32,
 }
 
+impl Default for BaseValues {
+    fn default() -> Self {
+        Self {
+            zeni: 1000,
+            land: 10,
+            tatami: 10,
+            research_level: 0,
+            tech_level: 0,
+        }
+    }
+}
+
 #[derive(Resource, Debug, Reflect, Clone, Serialize, Deserialize)]
 #[reflect(Resource)]
 pub struct BasePower {
@@ -125,4 +161,15 @@ pub struct BasePower {
     pub consumption: u32,
     pub capacity: u32,
     pub current: u32,
+}
+
+impl Default for BasePower {
+    fn default() -> Self {
+        Self {
+            generation: 1,
+            consumption: 0,
+            capacity: 100,
+            current: 1,
+        }
+    }
 }

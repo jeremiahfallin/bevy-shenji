@@ -1,9 +1,12 @@
 use crate::theme::primitives::image::{CapabilityUiImage, ImmUiImageExt};
 use crate::theme::primitives::text::CapabilityUiTextStyle;
 use bevy::prelude::*;
+use bevy::ui::FocusPolicy;
 use bevy_immediate::ui::CapsUi;
 use bevy_immediate::ui::text::CapabilityUiText;
 use bevy_immediate::{CapSet, ImmCapAccessRequests, ImmCapability, ImmEntity, ImplCap};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 use crate::theme::prelude::*;
 use crate::theme::styles::buttons::{style_btn_primary, style_btn_primary_hover};
@@ -14,6 +17,7 @@ pub struct CapabilityButton;
 impl ImmCapability for CapabilityButton {
     fn build<Cap: CapSet>(app: &mut bevy::app::App, cap_req: &mut ImmCapAccessRequests<Cap>) {
         cap_req.request_component_write::<Interaction>(app.world_mut());
+        cap_req.request_component_write::<FocusPolicy>(app.world_mut());
     }
 }
 
@@ -30,6 +34,7 @@ pub trait ImmUiButton<Cap: CapSet> {
         style_fn: impl for<'a, 'w, 's> FnOnce(ImmEntity<'a, 'w, 's, Cap>) -> ImmEntity<'a, 'w, 's, Cap>,
     ) -> Self;
     fn with_icon(self, icon: lucide_icons::Icon) -> Self;
+    fn disabled(self, disabled: bool) -> Self;
 }
 
 impl<Cap> ImmUiButton<Cap> for ImmEntity<'_, '_, '_, Cap>
@@ -82,7 +87,10 @@ where
 
     fn with_icon(self, icon: lucide_icons::Icon) -> Self {
         self.add(|ui| {
-            ui.ch().icon(icon).text_base().text_color(Color::WHITE);
+            ui.ch_id("icon")
+                .icon(icon)
+                .text_base()
+                .text_color(Color::WHITE);
         })
     }
 
@@ -109,5 +117,16 @@ where
             // Apply the user's overrides
             style_fn(label);
         })
+    }
+
+    fn disabled(mut self, disabled: bool) -> Self {
+        if disabled {
+            self.entity_commands().insert(FocusPolicy::Pass);
+            self = self.bg(GRAY_700).text_color(Color::srgb(0.5, 0.5, 0.5));
+        } else {
+            self.entity_commands().insert(FocusPolicy::Block);
+            self = style_btn_primary(self);
+        }
+        self
     }
 }

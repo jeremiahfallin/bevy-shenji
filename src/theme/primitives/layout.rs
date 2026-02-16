@@ -78,6 +78,7 @@ pub trait ImmUiLayout {
     fn column_gap(self, val: f32) -> Self;
     fn justify_self(self, val: JustifySelf) -> Self;
     fn scroll_y(self) -> Self;
+    fn scroll_x(self) -> Self;
     fn grid_template_columns(self, tracks: Vec<RepeatedGridTrack>) -> Self;
 }
 
@@ -296,6 +297,10 @@ where
 
     fn scroll_y(self) -> Self {
         self.style(|s| s.overflow.y = OverflowAxis::Scroll)
+    }
+
+    fn scroll_x(self) -> Self {
+        self.style(|s| s.overflow.x = OverflowAxis::Scroll)
     }
 
     fn grid_template_columns(self, tracks: Vec<RepeatedGridTrack>) -> Self {

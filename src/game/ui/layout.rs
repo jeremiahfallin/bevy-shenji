@@ -40,18 +40,9 @@ impl ImmediateAttach<CapsUi> for GameLayout {
                 .flex_grow()
                 .scroll_y()
                 .bg(Color::srgba(0.0, 0.0, 0.0, 0.2));
-            main_view.entity_commands().insert(Name::new("Main View"));
-
-            main_view.add(|ui| {
-                let mut content = ui
-                    .ch()
-                    .w_full()
-                    .min_h(Val::Px(500.0))
-                    .bg(Color::srgba(0.1, 0.1, 0.1, 0.5));
-                content
-                    .entity_commands()
-                    .insert((Name::new("Placeholder Map"), Content));
-            });
+            main_view
+                .entity_commands()
+                .insert((Name::new("Main View"), Content));
 
             // Bottom Bar
             let mut bottom_bar = ui.ch().apply(style_bottom_bar);

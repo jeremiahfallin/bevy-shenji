@@ -7,7 +7,10 @@ pub mod inspector;
 pub mod layout;
 pub mod sidebar;
 
+use crate::game::resources::UiState;
+
 pub(super) fn plugin(app: &mut App) {
+    app.init_resource::<UiState>();
     app.add_plugins((
         bottom_bar::plugin,
         character::plugin,
