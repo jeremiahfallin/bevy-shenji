@@ -69,8 +69,12 @@ impl ImmediateAttach<CapsUi> for Sidebar {
                         let wood_text = format!("Game Time: {:.0}", game_state.game_time);
                         ui.ch().label(wood_text);
 
-                        let rate_text = format!("({:.1}/sec)", game_state.is_paused);
-                        ui.ch().label(rate_text);
+                        let days_text = format!("Days: {}", game_state.game_days);
+                        ui.ch().label(days_text);
+
+                        if game_state.is_paused {
+                            ui.ch().label("Paused");
+                        }
                     });
             });
     }
