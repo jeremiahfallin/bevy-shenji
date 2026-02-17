@@ -174,6 +174,7 @@ fn poll_load_game(
     mut game_state: ResMut<GameState>,
     mut player_state: ResMut<PlayerState>,
     mut squad_state: ResMut<SquadState>,
+    mut base_state: ResMut<BaseState>,
     mut research_state: ResMut<ResearchState>,
     old_characters: Query<Entity, With<CharacterInfo>>,
 ) {
@@ -182,21 +183,31 @@ fn poll_load_game(
             match result {
                 Ok(save_data) => {
                     info!("Loading game data...");
+
+                    // 1. Despawn all existing character entities to avoid orphans.
+                    //    This uses deferred commands, but we rebuild the entity map
+                    //    below so the old Entity IDs are never referenced again.
                     for entity in old_characters.iter() {
                         commands.entity(entity).despawn();
                     }
+
+                    // 2. Restore top-level resource state from save data.
                     *game_state = save_data.game_state;
                     *player_state = save_data.player_state;
+
+                    // 3. Restore squad state. The saved `characters` HashMap contains
+                    //    Entity IDs from the old session which are now invalid, so we
+                    //    must clear it and rebuild after spawning new entities.
                     *squad_state = save_data.squad_state;
                     squad_state.characters.clear();
-                    if let Some(base) = save_data.base_state {
-                        commands.insert_resource(base);
-                    }
-                    if let Some(research) = save_data.research_state {
-                        *research_state = research;
-                    } else {
-                        *research_state = ResearchState::default();
-                    }
+
+                    // 4. Restore base and research state, defaulting if absent
+                    //    (for backwards compatibility with older saves).
+                    *base_state = save_data.base_state.unwrap_or_default();
+                    *research_state = save_data.research_state.unwrap_or_default();
+
+                    // 5. Respawn character entities from save data and rebuild the
+                    //    entity map so SquadState.characters has valid Entity IDs.
                     for char_data in save_data.characters {
                         let id = char_data.info.id.clone();
                         let entity = commands
@@ -211,6 +222,7 @@ fn poll_load_game(
                             .id();
                         squad_state.characters.insert(id, entity);
                     }
+
                     info!("Game loaded successfully!");
                 }
                 Err(e) => error!("Failed to load game: {}", e),
