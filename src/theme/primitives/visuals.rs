@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_immediate::ui::CapsUi;
-use bevy_immediate::ui::base::CapabilityUiBase;
 use bevy_immediate::{CapSet, ImmCapAccessRequests, ImmCapability, ImmEntity, ImplCap};
 
 use super::style::{CapabilityUiLayout, ImmUiStyleExt};
@@ -12,9 +11,9 @@ impl ImmCapability for CapabilityUiVisuals {
     fn build<Cap: CapSet>(app: &mut bevy::app::App, cap_req: &mut ImmCapAccessRequests<Cap>) {
         cap_req.request_component_write::<BackgroundColor>(app.world_mut());
         cap_req.request_component_write::<BorderColor>(app.world_mut());
-        // In Bevy 0.15, Outline is its own component
         cap_req.request_component_write::<Outline>(app.world_mut());
         cap_req.request_component_write::<BorderRadius>(app.world_mut());
+        cap_req.request_component_write::<ZIndex>(app.world_mut());
     }
 }
 
@@ -32,6 +31,9 @@ pub trait ImmUiVisuals {
     fn rounded_full(self) -> Self;
 
     fn opacity(self, val: f32) -> Self;
+
+    fn z_index(self, val: i32) -> Self;
+    fn z_index_global(self, val: i32) -> Self;
 }
 
 impl<Cap> ImmUiVisuals for ImmEntity<'_, '_, '_, Cap>
@@ -89,6 +91,24 @@ where
         // Simple alpha modification for background
         if let Ok(Some(mut bg)) = self.cap_get_component_mut::<BackgroundColor>() {
             bg.0.set_alpha(val);
+        }
+        self
+    }
+
+    fn z_index(mut self, val: i32) -> Self {
+        if let Ok(Some(mut z)) = self.cap_get_component_mut::<ZIndex>() {
+            *z = ZIndex(val);
+        } else {
+            self.entity_commands().insert(ZIndex(val));
+        }
+        self
+    }
+
+    fn z_index_global(mut self, val: i32) -> Self {
+        if let Ok(Some(mut z)) = self.cap_get_component_mut::<GlobalZIndex>() {
+            *z = GlobalZIndex(val);
+        } else {
+            self.entity_commands().insert(GlobalZIndex(val));
         }
         self
     }

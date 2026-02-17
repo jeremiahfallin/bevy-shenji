@@ -1,5 +1,6 @@
 use bevy::{ecs::system::IntoObserverSystem, prelude::*};
 use bevy_immediate::{CapSet, ImmCapAccessRequests, ImmCapability, ImmEntity, ImplCap};
+use std::marker::PhantomData;
 
 use crate::theme::resources::LucideAssets;
 use crate::theme::widgets::icon::LucideIcon;
@@ -33,23 +34,30 @@ impl FromWorld for InteractionAssets {
     }
 }
 
-// Marker component to prevent double observation
 #[derive(Component)]
-pub struct HasObserver;
+pub struct ObserverMarker<T: Send + Sync + 'static>(PhantomData<T>);
 
-// Capability to allow access to HasObserver
-pub struct CapabilityObserver;
-
-impl ImmCapability for CapabilityObserver {
-    fn build<Cap: CapSet>(app: &mut App, cap_req: &mut ImmCapAccessRequests<Cap>) {
-        cap_req.request_component_write::<HasObserver>(app.world_mut());
+impl<T: Send + Sync + 'static> Default for ObserverMarker<T> {
+    fn default() -> Self {
+        Self(PhantomData)
     }
 }
 
+pub struct PrimaryClick;
+pub struct SecondaryClick;
+pub struct HoverSound;
+
+pub struct CapabilityObserver;
+
 pub trait ImmUiInteractionExt {
-    fn on_click<M>(self, system: impl IntoObserverSystem<Pointer<Click>, (), M>) -> Self;
-    // Helper to add observer only if not present
+    // Keep the simple API for 99% of cases
     fn on_click_once<M>(self, system: impl IntoObserverSystem<Pointer<Click>, (), M>) -> Self;
+
+    // Add the robust API for advanced cases (multiple listeners)
+    fn on_click_tagged<Marker: Send + Sync + 'static, M>(
+        self,
+        system: impl IntoObserverSystem<Pointer<Click>, (), M>,
+    ) -> Self;
 }
 
 fn play_on_hover_sound_effect(
@@ -86,22 +94,28 @@ impl<Cap> ImmUiInteractionExt for ImmEntity<'_, '_, '_, Cap>
 where
     Cap: CapSet + ImplCap<CapabilityObserver>,
 {
-    fn on_click<M>(mut self, system: impl IntoObserverSystem<Pointer<Click>, (), M>) -> Self {
-        self.entity_commands().observe(system);
-        self
-    }
-
-    fn on_click_once<M>(mut self, system: impl IntoObserverSystem<Pointer<Click>, (), M>) -> Self {
-        let has_observer = self
-            .cap_get_component::<HasObserver>()
+    fn on_click_tagged<Marker: Send + Sync + 'static, M>(
+        mut self,
+        system: impl IntoObserverSystem<Pointer<Click>, (), M>,
+    ) -> Self {
+        // Check for the *Specific* marker type
+        let has_marker = self
+            .cap_get_component::<ObserverMarker<Marker>>()
             .ok()
             .flatten()
             .is_some();
 
-        if !has_observer {
-            self.entity_commands().observe(system).insert(HasObserver);
+        if !has_marker {
+            self.entity_commands()
+                .insert(ObserverMarker::<Marker>::default())
+                .observe(system);
         }
         self
+    }
+
+    // default implementation forwards to the "Primary" tag
+    fn on_click_once<M>(self, system: impl IntoObserverSystem<Pointer<Click>, (), M>) -> Self {
+        self.on_click_tagged::<PrimaryClick, _>(system)
     }
 }
 
