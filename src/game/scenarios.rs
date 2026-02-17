@@ -1,4 +1,5 @@
-use super::resources::{GameState, PlayerState, SquadState};
+use super::research::ResearchState;
+use super::resources::{BaseState, GameState, PlayerState, SquadState};
 use bevy::prelude::*;
 
 #[derive(Debug, Clone)]
@@ -65,6 +66,8 @@ pub fn apply_scenario(
     game_state: &mut GameState,
     player_state: &mut PlayerState,
     squad_state: &mut SquadState,
+    base_state: &mut BaseState,
+    research_state: &mut ResearchState,
 ) {
     game_state.reset();
     game_state.current_level = scenario.starting_level;
@@ -74,6 +77,8 @@ pub fn apply_scenario(
     player_state.level = scenario.starting_level;
 
     *squad_state = SquadState::default();
+    *base_state = BaseState::default();
+    *research_state = ResearchState::default();
 
     for template in &scenario.starting_characters {
         // Generate a new ID for the character

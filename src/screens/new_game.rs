@@ -8,7 +8,8 @@ use bevy_immediate::{
 
 use crate::{
     game::{
-        resources::{GameState, PlayerState, SquadState},
+        research::ResearchState,
+        resources::{BaseState, GameState, PlayerState, SquadState},
         scenarios::{apply_scenario, get_all_scenarios},
     },
     screens::Screen,
@@ -96,9 +97,11 @@ impl ImmediateAttach<CapsUi> for NewGameScreen {
                                                       mut game: ResMut<GameState>,
                                                       mut player: ResMut<PlayerState>,
                                                       mut squad: ResMut<SquadState>,
+                                                      mut base: ResMut<BaseState>,
+                                                      mut research: ResMut<ResearchState>,
                                                       mut screen: ResMut<NextState<Screen>>| {
 
-                                                    apply_scenario(&mut commands, &s, &mut game, &mut player, &mut squad);
+                                                    apply_scenario(&mut commands, &s, &mut game, &mut player, &mut squad, &mut base, &mut research);
                                                     screen.set(Screen::Gameplay);
                                                 })
                                         .add(|ui| { ui.ch().label("Start"); });
