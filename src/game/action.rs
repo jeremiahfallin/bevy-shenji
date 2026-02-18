@@ -96,6 +96,44 @@ impl ActionState {
     }
 }
 
+fn dequeue_actions(mut characters: Query<&mut ActionState>) {
+    for mut state in &mut characters {
+        if state.current_action.is_some() {
+            continue;
+        }
+        // Try action queue first
+        if let Some(action) = state.action_queue.pop_front() {
+            state.current_action = Some(action);
+            state.progress = ActionProgress::default();
+            continue;
+        }
+        // Try job queue (loops)
+        if !state.job_queue.is_empty() {
+            let job_index = state.current_job_index % state.job_queue.len();
+            let actions: Vec<Action> = state.job_queue[job_index].actions.clone();
+            if !actions.is_empty() {
+                for action in actions {
+                    state.action_queue.push_back(action);
+                }
+                state.current_job_index += 1;
+                if let Some(action) = state.action_queue.pop_front() {
+                    state.current_action = Some(action);
+                    state.progress = ActionProgress::default();
+                }
+            }
+            continue;
+        }
+        // Default to idle
+        state.current_action = Some(Action::Idle);
+        state.progress = ActionProgress::default();
+    }
+}
+
 pub fn plugin(app: &mut App) {
     app.register_type::<ActionState>();
+
+    app.add_systems(
+        FixedUpdate,
+        dequeue_actions.in_set(crate::game::simulation::SimulationSystems::ProcessActions),
+    );
 }
