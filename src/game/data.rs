@@ -19,11 +19,31 @@ pub struct SubraceDef {
     pub xp_multipliers: HashMap<String, f32>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Reflect, PartialEq)]
+pub enum ResearchEffect {
+    UnlocksBuilding(String),
+    UnlocksRecipe(String),
+    SetsTechLevel(u32),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Reflect)]
+pub struct ResearchDef {
+    pub id: String,
+    pub name: String,
+    pub research_type: String,
+    pub tech_level: u32,
+    pub cost: HashMap<String, u32>,
+    pub time: u32,
+    pub prerequisites: Vec<String>,
+    pub effects: Vec<ResearchEffect>,
+}
+
 #[derive(Resource, Clone, Debug, Default, Reflect)]
 #[reflect(Resource)]
 pub struct GameData {
     pub items: HashMap<String, ItemDef>,
     pub races: Vec<SubraceDef>,
+    pub research: HashMap<String, ResearchDef>,
 }
 
 impl GameData {
@@ -39,6 +59,10 @@ impl GameData {
             .copied()
             .unwrap_or(1.0)
     }
+
+    pub fn get_research(&self, id: &str) -> Option<&ResearchDef> {
+        self.research.get(id)
+    }
 }
 
 fn load_game_data(mut game_data: ResMut<GameData>) {
@@ -53,6 +77,14 @@ fn load_game_data(mut game_data: ResMut<GameData>) {
     let races_str = include_str!("../../assets/data/races.ron");
     let races: Vec<SubraceDef> = ron::from_str(races_str).expect("Failed to parse races.ron");
     game_data.races = races;
+
+    // Load research
+    let research_str = include_str!("../../assets/data/research.ron");
+    let research_list: Vec<ResearchDef> =
+        ron::from_str(research_str).expect("Failed to parse research.ron");
+    for research in research_list {
+        game_data.research.insert(research.id.clone(), research);
+    }
 }
 
 pub fn plugin(app: &mut App) {

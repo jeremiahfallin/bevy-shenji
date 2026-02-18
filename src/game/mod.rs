@@ -18,7 +18,6 @@ pub fn plugin(app: &mut App) {
     app.init_resource::<resources::SquadState>();
     app.init_resource::<resources::NotificationState>();
     app.init_resource::<resources::BaseInventory>();
-    app.init_resource::<research::TechTree>();
     app.init_resource::<research::ResearchState>();
     app.init_resource::<resources::BaseState>();
 

@@ -1,120 +1,44 @@
 // src/game/research.rs
-use crate::game::resources::BaseValues;
-use bevy::{
-    platform::collections::{HashMap, HashSet},
-    prelude::*,
-};
+use bevy::platform::collections::HashSet;
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-// --- STATIC DATA (The Rules) ---
+use crate::game::data::GameData;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Reflect, Serialize, Deserialize)]
-pub enum TechId {
-    BasicTools,
-    Agriculture,
-    Mining,
-    SteelSmelting,
-    // Add more...
-}
-
-#[derive(Debug, Clone)]
-pub struct TechDefinition {
-    pub id: TechId,
-    pub name: String,
-    pub description: String,
-    pub cost: u32, // Cost in 'Research Points' or 'Zeni'
-    pub tier: u32, // For UI grouping (Column 1, 2, 3...)
-    pub dependencies: Vec<TechId>,
-}
-
-// A central repository for all tech definitions
-#[derive(Resource)]
-pub struct TechTree {
-    pub defs: HashMap<TechId, TechDefinition>,
-}
-
-impl FromWorld for TechTree {
-    fn from_world(_world: &mut World) -> Self {
-        let mut defs = HashMap::new();
-
-        // Helper to insert
-        let mut add =
-            |id: TechId, name: &str, desc: &str, cost: u32, tier: u32, deps: Vec<TechId>| {
-                defs.insert(
-                    id.clone(),
-                    TechDefinition {
-                        id,
-                        name: name.to_string(),
-                        description: desc.to_string(),
-                        cost,
-                        tier,
-                        dependencies: deps,
-                    },
-                );
-            };
-
-        add(
-            TechId::BasicTools,
-            "Basic Tools",
-            "Unlocks simple gathering.",
-            50,
-            0,
-            vec![],
-        );
-        add(
-            TechId::Agriculture,
-            "Agriculture",
-            "Grow your own food.",
-            100,
-            1,
-            vec![TechId::BasicTools],
-        );
-        add(
-            TechId::Mining,
-            "Mining",
-            "Extract ores from the earth.",
-            150,
-            1,
-            vec![TechId::BasicTools],
-        );
-        add(
-            TechId::SteelSmelting,
-            "Steel Smelting",
-            "Better alloys.",
-            300,
-            2,
-            vec![TechId::Mining],
-        );
-
-        Self { defs }
-    }
-}
-
-// --- DYNAMIC STATE (The Player's Progress) ---
-
+/// Dynamic state tracking the player's research progress.
 #[derive(Resource, Default, Debug, Clone, Reflect, Serialize, Deserialize)]
 #[reflect(Resource)]
 pub struct ResearchState {
-    pub unlocked: HashSet<TechId>,
+    /// Set of research IDs that have been completed.
+    pub unlocked: HashSet<String>,
+    /// The research ID currently being worked on (if any).
+    pub current_research: Option<String>,
+    /// Number of ticks of progress on the current research.
+    pub research_progress: u32,
 }
 
 impl ResearchState {
-    pub fn is_unlocked(&self, id: &TechId) -> bool {
+    /// Returns `true` if the given research has already been completed.
+    pub fn is_unlocked(&self, id: &str) -> bool {
         self.unlocked.contains(id)
     }
 
-    pub fn can_research(&self, id: &TechId, tree: &TechTree) -> bool {
+    /// Returns `true` if the given research can be started:
+    /// - it is not already unlocked
+    /// - all prerequisites are unlocked
+    /// - the research ID exists in GameData
+    pub fn can_research(&self, id: &str, game_data: &GameData) -> bool {
         if self.is_unlocked(id) {
             return false;
         }
 
-        let Some(def) = tree.defs.get(id) else {
+        let Some(def) = game_data.get_research(id) else {
             return false;
         };
 
-        // Check dependencies
-        for dep in &def.dependencies {
-            if !self.is_unlocked(dep) {
+        // Check all prerequisites are unlocked
+        for prereq in &def.prerequisites {
+            if !self.is_unlocked(prereq) {
                 return false;
             }
         }
