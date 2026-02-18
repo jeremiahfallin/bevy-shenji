@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 pub mod action;
+pub mod building;
 pub mod character;
 pub mod data;
 pub mod location;
@@ -32,6 +33,7 @@ pub fn plugin(app: &mut App) {
 
     data::plugin(app);
     action::plugin(app);
+    building::plugin(app);
     location::plugin(app);
     simulation::plugin(app);
     app.add_plugins(save::plugin);

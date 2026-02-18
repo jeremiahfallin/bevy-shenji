@@ -50,6 +50,22 @@ pub struct RecipeDef {
     pub required_research: Option<String>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Reflect)]
+pub struct BuildingDef {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub category: String,
+    pub cost: HashMap<String, u32>,
+    pub build_time: u32,
+    pub tech_level: u32,
+    pub required_research: Vec<String>,
+    pub power_generation: i32,
+    pub max_workers: u32,
+    pub provides_workstation: Option<String>,
+    pub provides_storage: u32,
+}
+
 #[derive(Resource, Clone, Debug, Default, Reflect)]
 #[reflect(Resource)]
 pub struct GameData {
@@ -57,6 +73,7 @@ pub struct GameData {
     pub races: Vec<SubraceDef>,
     pub research: HashMap<String, ResearchDef>,
     pub recipes: HashMap<String, RecipeDef>,
+    pub buildings: HashMap<String, BuildingDef>,
 }
 
 impl GameData {
@@ -79,6 +96,10 @@ impl GameData {
 
     pub fn get_recipe(&self, id: &str) -> Option<&RecipeDef> {
         self.recipes.get(id)
+    }
+
+    pub fn get_building(&self, id: &str) -> Option<&BuildingDef> {
+        self.buildings.get(id)
     }
 }
 
@@ -109,6 +130,14 @@ fn load_game_data(mut game_data: ResMut<GameData>) {
         ron::from_str(recipes_str).expect("Failed to parse recipes.ron");
     for recipe in recipe_list {
         game_data.recipes.insert(recipe.id.clone(), recipe);
+    }
+
+    // Load buildings
+    let buildings_str = include_str!("../../assets/data/buildings.ron");
+    let building_list: Vec<BuildingDef> =
+        ron::from_str(buildings_str).expect("Failed to parse buildings.ron");
+    for building in building_list {
+        game_data.buildings.insert(building.id.clone(), building);
     }
 }
 
