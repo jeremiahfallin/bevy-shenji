@@ -2,6 +2,8 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::game::location::LocationType;
+
 #[derive(Clone, Debug, Serialize, Deserialize, Reflect)]
 pub struct ItemDef {
     pub id: String,
@@ -66,6 +68,18 @@ pub struct BuildingDef {
     pub provides_storage: u32,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Reflect)]
+pub struct LocationDef {
+    pub id: String,
+    pub name: String,
+    pub loc_type: LocationType,
+    pub distance: u32,
+    pub resource_type: String,
+    pub capacity: u32,
+    pub yield_rate: u32,
+    pub discovered: bool,
+}
+
 #[derive(Resource, Clone, Debug, Default, Reflect)]
 #[reflect(Resource)]
 pub struct GameData {
@@ -74,6 +88,7 @@ pub struct GameData {
     pub research: HashMap<String, ResearchDef>,
     pub recipes: HashMap<String, RecipeDef>,
     pub buildings: HashMap<String, BuildingDef>,
+    pub locations: Vec<LocationDef>,
 }
 
 impl GameData {
@@ -100,6 +115,10 @@ impl GameData {
 
     pub fn get_building(&self, id: &str) -> Option<&BuildingDef> {
         self.buildings.get(id)
+    }
+
+    pub fn get_location(&self, id: &str) -> Option<&LocationDef> {
+        self.locations.iter().find(|l| l.id == id)
     }
 }
 
@@ -139,6 +158,12 @@ fn load_game_data(mut game_data: ResMut<GameData>) {
     for building in building_list {
         game_data.buildings.insert(building.id.clone(), building);
     }
+
+    // Load locations
+    let locations_str = include_str!("../../assets/data/locations.ron");
+    let location_list: Vec<LocationDef> =
+        ron::from_str(locations_str).expect("Failed to parse locations.ron");
+    game_data.locations = location_list;
 }
 
 pub fn plugin(app: &mut App) {

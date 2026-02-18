@@ -20,6 +20,12 @@ pub struct LocationInfo {
     pub name: String,
     pub loc_type: LocationType,
     pub distance: u32,
+    #[serde(default = "default_discovered")]
+    pub discovered: bool,
+}
+
+fn default_discovered() -> bool {
+    true
 }
 
 #[derive(Component, Clone, Debug, Default, Serialize, Deserialize, Reflect)]

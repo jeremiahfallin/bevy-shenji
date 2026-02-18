@@ -1,4 +1,6 @@
 use super::character::Squad;
+use super::data::GameData;
+use super::location::{LocationInfo, LocationInventory, LocationRegistry, LocationResources};
 use super::research::ResearchState;
 use super::resources::{BaseState, GameState, PlayerState, SquadState};
 use bevy::prelude::*;
@@ -70,11 +72,20 @@ pub fn apply_scenario(
     base_state: &mut BaseState,
     research_state: &mut ResearchState,
     old_characters: &[Entity],
+    game_data: &GameData,
+    location_registry: &mut LocationRegistry,
+    old_locations: &[Entity],
 ) {
     // Despawn any existing character entities to prevent orphans/duplicates.
     for &entity in old_characters {
         commands.entity(entity).despawn();
     }
+
+    // Despawn any existing location entities.
+    for &entity in old_locations {
+        commands.entity(entity).despawn();
+    }
+    location_registry.locations.clear();
 
     game_state.reset();
     game_state.current_level = scenario.starting_level;
@@ -118,5 +129,30 @@ pub fn apply_scenario(
         if template.starting_squad > 0 {
             squad_state.add_member_to_squad(&id, template.starting_squad);
         }
+    }
+
+    // Spawn location entities from GameData
+    for loc_def in &game_data.locations {
+        let entity = commands
+            .spawn((
+                LocationInfo {
+                    id: loc_def.id.clone(),
+                    name: loc_def.name.clone(),
+                    loc_type: loc_def.loc_type.clone(),
+                    distance: loc_def.distance,
+                    discovered: loc_def.discovered,
+                },
+                LocationResources {
+                    resource_type: loc_def.resource_type.clone(),
+                    capacity: loc_def.capacity,
+                    yield_rate: loc_def.yield_rate,
+                    current_amount: loc_def.capacity, // Start full
+                },
+                LocationInventory::default(),
+            ))
+            .id();
+        location_registry
+            .locations
+            .insert(loc_def.id.clone(), entity);
     }
 }

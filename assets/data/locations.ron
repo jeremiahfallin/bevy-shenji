@@ -1,0 +1,16 @@
+[
+    (id: "base", name: "Home Base", loc_type: Base, distance: 0,
+     resource_type: "", capacity: 0, yield_rate: 0, discovered: true),
+    (id: "stone_quarry", name: "Stone Quarry", loc_type: Mine, distance: 20,
+     resource_type: "stone", capacity: 1000, yield_rate: 2, discovered: true),
+    (id: "forest", name: "Forest", loc_type: Forest, distance: 15,
+     resource_type: "lumber", capacity: 800, yield_rate: 2, discovered: true),
+    (id: "copper_mine", name: "Copper Mine", loc_type: Mine, distance: 30,
+     resource_type: "copper_ore", capacity: 500, yield_rate: 1, discovered: false),
+    (id: "iron_mine", name: "Iron Mine", loc_type: Mine, distance: 45,
+     resource_type: "iron_ore", capacity: 300, yield_rate: 1, discovered: false),
+    (id: "ancient_ruins", name: "Ancient Ruins", loc_type: Ruins, distance: 60,
+     resource_type: "books", capacity: 100, yield_rate: 1, discovered: false),
+    (id: "trading_post", name: "Trading Post", loc_type: City, distance: 40,
+     resource_type: "", capacity: 0, yield_rate: 0, discovered: false),
+]
