@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::tasks::{IoTaskPool, Task, block_on, poll_once};
 use serde::{Deserialize, Serialize};
 
+use crate::game::action::ActionState;
 use crate::game::character::{
     CharacterBundle, CharacterInfo, Equipment, Health, Inventory, Skills, Squad,
 };
@@ -57,6 +58,8 @@ pub struct SerializedCharacter {
     pub equipment: Equipment,
     pub inventory: Inventory,
     pub squad: Squad,
+    #[serde(default)]
+    pub action_state: ActionState,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -102,11 +105,12 @@ fn save_game(
         &Equipment,
         &Inventory,
         &Squad,
+        &ActionState,
     )>,
 ) {
     for message in events.drain() {
         let mut serialized_characters = Vec::new();
-        for (info, health, skills, equip, inv, squad) in character_query.iter() {
+        for (info, health, skills, equip, inv, squad, action_state) in character_query.iter() {
             serialized_characters.push(SerializedCharacter {
                 info: info.clone(),
                 health: *health,
@@ -114,6 +118,7 @@ fn save_game(
                 equipment: equip.clone(),
                 inventory: inv.clone(),
                 squad: *squad,
+                action_state: action_state.clone(),
             });
         }
 
@@ -259,6 +264,7 @@ fn poll_load_game(
                                 equipment: char_data.equipment,
                                 inventory: char_data.inventory,
                                 squad: char_data.squad,
+                                action_state: char_data.action_state,
                             })
                             .id();
                         squad_state.characters.insert(id, entity);

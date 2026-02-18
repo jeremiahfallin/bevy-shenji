@@ -1,6 +1,8 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize};
 
+use crate::game::action::ActionState;
+
 #[derive(
     Component, Debug, Clone, Copy, PartialEq, Eq, Reflect, Serialize, Deserialize,
 )]
@@ -111,6 +113,7 @@ pub struct CharacterBundle {
     pub equipment: Equipment,
     pub inventory: Inventory,
     pub squad: Squad,
+    pub action_state: ActionState,
 }
 
 impl Health {
@@ -185,6 +188,7 @@ impl CharacterBundle {
                 items: HashMap::new(),
             },
             squad: Squad(0),
+            action_state: ActionState::default(),
         }
     }
 }
