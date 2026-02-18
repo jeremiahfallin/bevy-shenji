@@ -8,7 +8,8 @@ use crate::game::character::{
 };
 use crate::game::research::ResearchState;
 use crate::game::resources::{
-    BaseState, GameState, NotificationLevel, NotificationState, PlayerState, SquadState,
+    BaseInventory, BaseState, GameState, NotificationLevel, NotificationState, PlayerState,
+    SquadState,
 };
 use crate::game::simulation::SimulationState;
 use crate::screens::Screen;
@@ -72,6 +73,7 @@ pub struct SaveData {
     pub base_state: Option<BaseState>,
     pub research_state: Option<ResearchState>,
     pub simulation_state: Option<SimulationState>,
+    pub base_inventory: Option<BaseInventory>,
     pub characters: Vec<SerializedCharacter>,
 }
 
@@ -100,6 +102,7 @@ fn save_game(
     base_state: Option<Res<BaseState>>,
     research_state: Option<Res<ResearchState>>,
     sim_state: Res<SimulationState>,
+    base_inventory: Res<BaseInventory>,
     character_query: Query<(
         &CharacterInfo,
         &Health,
@@ -135,6 +138,7 @@ fn save_game(
             base_state: base_state.as_ref().map(|b| (**b).clone()),
             research_state: research_state.as_ref().map(|r| (**r).clone()),
             simulation_state: Some(sim_state.clone()),
+            base_inventory: Some(base_inventory.clone()),
             characters: serialized_characters,
         };
 
@@ -226,6 +230,7 @@ fn poll_load_game(
     mut base_state: ResMut<BaseState>,
     mut research_state: ResMut<ResearchState>,
     mut sim_state: ResMut<SimulationState>,
+    mut base_inventory: ResMut<BaseInventory>,
     mut notifications: ResMut<NotificationState>,
     old_characters: Query<Entity, With<CharacterInfo>>,
 ) {
@@ -257,6 +262,7 @@ fn poll_load_game(
                     *base_state = save_data.base_state.unwrap_or_default();
                     *research_state = save_data.research_state.unwrap_or_default();
                     *sim_state = save_data.simulation_state.unwrap_or_default();
+                    *base_inventory = save_data.base_inventory.unwrap_or_default();
 
                     // 5. Respawn character entities from save data and rebuild the
                     //    entity map so SquadState.characters has valid Entity IDs.

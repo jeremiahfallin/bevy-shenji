@@ -1,6 +1,6 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
+use std::collections::{HashMap as StdHashMap, VecDeque};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Reflect, Serialize, Deserialize)]
 pub enum GameView {
@@ -209,5 +209,34 @@ impl NotificationState {
             n.ttl -= dt;
         }
         self.notifications.retain(|n| n.ttl > 0.0);
+    }
+}
+
+#[derive(Resource, Clone, Debug, Default, Serialize, Deserialize, Reflect)]
+#[reflect(Resource)]
+pub struct BaseInventory {
+    pub items: StdHashMap<String, u32>,
+}
+
+impl BaseInventory {
+    pub fn add(&mut self, item: &str, amount: u32) {
+        *self.items.entry(item.to_string()).or_insert(0) += amount;
+    }
+
+    pub fn remove(&mut self, item: &str, amount: u32) -> bool {
+        if let Some(current) = self.items.get_mut(item) {
+            if *current >= amount {
+                *current -= amount;
+                if *current == 0 {
+                    self.items.remove(item);
+                }
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn count(&self, item: &str) -> u32 {
+        *self.items.get(item).unwrap_or(&0)
     }
 }

@@ -2,7 +2,9 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
-use crate::game::character::CharacterLocation;
+use crate::game::character::{CharacterLocation, Inventory};
+use crate::game::location::{LocationInfo, LocationInventory, LocationRegistry, LocationResources};
+use crate::game::resources::BaseInventory;
 
 /// A single action a character can perform
 #[derive(Clone, Debug, Serialize, Deserialize, Reflect, PartialEq)]
@@ -147,12 +149,145 @@ fn process_travel(mut characters: Query<(&mut ActionState, &mut CharacterLocatio
     }
 }
 
+fn process_gather(
+    mut characters: Query<(&mut ActionState, &CharacterLocation)>,
+    mut locations: Query<(
+        &LocationInfo,
+        &mut LocationResources,
+        &mut LocationInventory,
+    )>,
+    location_registry: Res<LocationRegistry>,
+) {
+    for (mut state, char_location) in &mut characters {
+        let (location_id, resource) = match &state.current_action {
+            Some(Action::Gather { location, resource }) => (location.clone(), resource.clone()),
+            _ => continue,
+        };
+
+        // Verify character is at the correct location
+        if char_location.location_id != location_id {
+            state.current_action = None;
+            continue;
+        }
+
+        // Find the location entity
+        let Some(&location_entity) = location_registry.locations.get(&location_id) else {
+            state.current_action = None;
+            continue;
+        };
+
+        let Ok((_loc_info, mut loc_resources, mut loc_inventory)) =
+            locations.get_mut(location_entity)
+        else {
+            state.current_action = None;
+            continue;
+        };
+
+        // Check that the resource type matches and there is something to gather
+        if loc_resources.resource_type != resource || loc_resources.current_amount == 0 {
+            state.current_action = None;
+            continue;
+        }
+
+        // Initialize progress on first tick
+        if state.progress.required == 0 {
+            state.progress = ActionProgress::new(100);
+        }
+
+        // Tick progress
+        if state.progress.tick() {
+            // Extract yield_rate amount from current_amount
+            let yield_amount = loc_resources.yield_rate.min(loc_resources.current_amount);
+            loc_resources.current_amount -= yield_amount;
+
+            // Add to location inventory
+            *loc_inventory
+                .items
+                .entry(resource.clone())
+                .or_insert(0) += yield_amount;
+
+            // Clear action
+            state.current_action = None;
+        }
+    }
+}
+
+fn process_collect(
+    mut characters: Query<(&mut ActionState, &CharacterLocation, &mut Inventory)>,
+    mut locations: Query<&mut LocationInventory>,
+    location_registry: Res<LocationRegistry>,
+) {
+    for (mut state, char_location, mut inventory) in &mut characters {
+        let (location_id, item) = match &state.current_action {
+            Some(Action::Collect { location, item }) => (location.clone(), item.clone()),
+            _ => continue,
+        };
+
+        // Verify character is at the correct location
+        if char_location.location_id != location_id {
+            state.current_action = None;
+            continue;
+        }
+
+        // Find the location entity
+        let Some(&location_entity) = location_registry.locations.get(&location_id) else {
+            state.current_action = None;
+            continue;
+        };
+
+        let Ok(mut loc_inventory) = locations.get_mut(location_entity) else {
+            state.current_action = None;
+            continue;
+        };
+
+        // Move items from location inventory to character inventory
+        if let Some(amount) = loc_inventory.items.remove(&item) {
+            *inventory.items.entry(item.clone()).or_insert(0) += amount;
+        }
+
+        // Clear action (instant)
+        state.current_action = None;
+    }
+}
+
+fn process_deposit(
+    mut characters: Query<(&mut ActionState, &CharacterLocation, &mut Inventory)>,
+    mut base_inventory: ResMut<BaseInventory>,
+) {
+    for (mut state, char_location, mut inventory) in &mut characters {
+        let item = match &state.current_action {
+            Some(Action::Deposit { item }) => item.clone(),
+            _ => continue,
+        };
+
+        // Verify character is at base
+        if char_location.location_id != "base" {
+            state.current_action = None;
+            continue;
+        }
+
+        // Move items from character inventory to base inventory
+        if let Some(amount) = inventory.items.remove(&item) {
+            base_inventory.add(&item, amount);
+        }
+
+        // Clear action (instant)
+        state.current_action = None;
+    }
+}
+
 pub fn plugin(app: &mut App) {
     app.register_type::<ActionState>();
 
     app.add_systems(
         FixedUpdate,
-        (dequeue_actions, process_travel)
+        (
+            dequeue_actions,
+            process_travel,
+            process_gather,
+            process_collect,
+            process_deposit,
+        )
             .chain()
             .in_set(crate::game::simulation::SimulationSystems::ProcessActions),
     );

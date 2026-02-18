@@ -16,6 +16,7 @@ pub fn plugin(app: &mut App) {
     app.init_resource::<resources::PlayerState>();
     app.init_resource::<resources::SquadState>();
     app.init_resource::<resources::NotificationState>();
+    app.init_resource::<resources::BaseInventory>();
     app.init_resource::<research::TechTree>();
     app.init_resource::<research::ResearchState>();
     app.init_resource::<resources::BaseState>();
@@ -25,6 +26,7 @@ pub fn plugin(app: &mut App) {
     app.register_type::<resources::PlayerState>();
     app.register_type::<resources::SquadState>();
     app.register_type::<resources::NotificationState>();
+    app.register_type::<resources::BaseInventory>();
 
     app.add_systems(Update, tick_notifications);
 

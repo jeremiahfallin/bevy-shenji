@@ -102,7 +102,7 @@ pub struct CharacterLocation {
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default, Reflect, Serialize, Deserialize)]
 #[reflect(Component)]
 pub struct Inventory {
-    pub items: HashMap<String, String>,
+    pub items: HashMap<String, u32>,
 }
 
 #[derive(
