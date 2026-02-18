@@ -5,6 +5,7 @@ pub mod research;
 pub mod resources;
 pub mod save;
 pub mod scenarios;
+pub mod simulation;
 pub mod systems;
 pub mod ui;
 
@@ -25,6 +26,7 @@ pub fn plugin(app: &mut App) {
 
     app.add_systems(Update, tick_notifications);
 
+    simulation::plugin(app);
     app.add_plugins(save::plugin);
     app.add_plugins(ui::plugin);
 }

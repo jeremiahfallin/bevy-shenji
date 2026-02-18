@@ -9,6 +9,7 @@ use crate::game::research::ResearchState;
 use crate::game::resources::{
     BaseState, GameState, NotificationLevel, NotificationState, PlayerState, SquadState,
 };
+use crate::game::simulation::SimulationState;
 use crate::screens::Screen;
 
 pub fn plugin(app: &mut App) {
@@ -65,6 +66,7 @@ pub struct SaveData {
     pub squad_state: SquadState,
     pub base_state: Option<BaseState>,
     pub research_state: Option<ResearchState>,
+    pub simulation_state: Option<SimulationState>,
     pub characters: Vec<SerializedCharacter>,
 }
 
@@ -92,6 +94,7 @@ fn save_game(
     squad_state: Res<SquadState>,
     base_state: Option<Res<BaseState>>,
     research_state: Option<Res<ResearchState>>,
+    sim_state: Res<SimulationState>,
     character_query: Query<(
         &CharacterInfo,
         &Health,
@@ -120,6 +123,7 @@ fn save_game(
             squad_state: squad_state.clone(),
             base_state: base_state.as_ref().map(|b| (**b).clone()),
             research_state: research_state.as_ref().map(|r| (**r).clone()),
+            simulation_state: Some(sim_state.clone()),
             characters: serialized_characters,
         };
 
@@ -210,6 +214,7 @@ fn poll_load_game(
     mut squad_state: ResMut<SquadState>,
     mut base_state: ResMut<BaseState>,
     mut research_state: ResMut<ResearchState>,
+    mut sim_state: ResMut<SimulationState>,
     mut notifications: ResMut<NotificationState>,
     old_characters: Query<Entity, With<CharacterInfo>>,
 ) {
@@ -236,10 +241,11 @@ fn poll_load_game(
                     *squad_state = save_data.squad_state;
                     squad_state.characters.clear();
 
-                    // 4. Restore base and research state, defaulting if absent
-                    //    (for backwards compatibility with older saves).
+                    // 4. Restore base, research, and simulation state, defaulting
+                    //    if absent (for backwards compatibility with older saves).
                     *base_state = save_data.base_state.unwrap_or_default();
                     *research_state = save_data.research_state.unwrap_or_default();
+                    *sim_state = save_data.simulation_state.unwrap_or_default();
 
                     // 5. Respawn character entities from save data and rebuild the
                     //    entity map so SquadState.characters has valid Entity IDs.

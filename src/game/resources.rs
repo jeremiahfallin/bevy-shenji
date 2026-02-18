@@ -21,17 +21,13 @@ pub struct UiState {
 #[reflect(Resource)]
 pub struct GameState {
     pub current_level: u32,
-    pub game_time: f32,
     pub is_paused: bool,
-    pub game_days: u32,
 }
 
 impl GameState {
     pub fn reset(&mut self) {
         self.current_level = 0;
-        self.game_time = 0.0;
         self.is_paused = false;
-        self.game_days = 0;
     }
 }
 
