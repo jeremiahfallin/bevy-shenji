@@ -2,7 +2,8 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
-use crate::game::character::{CharacterLocation, Inventory, Skills};
+use crate::game::character::{CharacterInfo, CharacterLocation, Inventory, Skills};
+use crate::game::data::GameData;
 use crate::game::location::{LocationInfo, LocationInventory, LocationRegistry, LocationResources};
 use crate::game::resources::BaseInventory;
 
@@ -276,33 +277,38 @@ fn process_deposit(
     }
 }
 
-fn apply_skill_xp(mut characters: Query<(&ActionState, &mut Skills)>) {
-    for (state, mut skills) in &mut characters {
+fn apply_skill_xp(
+    mut characters: Query<(&ActionState, &mut Skills, &CharacterInfo)>,
+    game_data: Res<GameData>,
+) {
+    for (state, mut skills, info) in &mut characters {
         let Some(ref action) = state.current_action else {
             continue;
         };
-        match action {
-            Action::Gather { .. } => {
-                skills.labouring = skills.labouring.saturating_add(1);
-            }
-            Action::Research { .. } => {
-                skills.science = skills.science.saturating_add(1);
-            }
-            Action::Explore => {
-                skills.scouting = skills.scouting.saturating_add(1);
-                skills.athletics = skills.athletics.saturating_add(1);
-            }
-            Action::Travel { .. } => {
-                skills.athletics = skills.athletics.saturating_add(1);
-            }
-            Action::Craft { .. } => {
-                // Will be refined later when we know which skill the recipe uses
-                skills.labouring = skills.labouring.saturating_add(1);
-            }
-            Action::Build { .. } => {
-                skills.engineer = skills.engineer.saturating_add(1);
-            }
+        let skill_name = match action {
+            Action::Gather { .. } => "labouring",
+            Action::Research { .. } => "science",
+            Action::Explore => "scouting",
+            Action::Travel { .. } => "athletics",
+            Action::Craft { .. } => "labouring",
+            Action::Build { .. } => "engineer",
+            _ => continue,
+        };
+        let multiplier = game_data.get_xp_multiplier(&info.race, &info.subrace, skill_name);
+        let xp_gain = (1.0 * multiplier) as u32;
+        // Apply to matching skill field
+        match skill_name {
+            "labouring" => skills.labouring = skills.labouring.saturating_add(xp_gain),
+            "science" => skills.science = skills.science.saturating_add(xp_gain),
+            "scouting" => skills.scouting = skills.scouting.saturating_add(xp_gain),
+            "athletics" => skills.athletics = skills.athletics.saturating_add(xp_gain),
+            "engineer" => skills.engineer = skills.engineer.saturating_add(xp_gain),
             _ => {}
+        }
+        // Explore also gives athletics XP
+        if matches!(action, Action::Explore) {
+            let ath_mult = game_data.get_xp_multiplier(&info.race, &info.subrace, "athletics");
+            skills.athletics = skills.athletics.saturating_add((1.0 * ath_mult) as u32);
         }
     }
 }
