@@ -2,7 +2,7 @@ use bevy::{platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize};
 
 #[derive(
-    Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect, Serialize, Deserialize,
+    Component, Debug, Clone, Copy, PartialEq, Eq, Reflect, Serialize, Deserialize,
 )]
 #[reflect(Component)]
 pub struct Health {
@@ -14,6 +14,21 @@ pub struct Health {
     pub left_leg: u8,
     pub right_leg: u8,
     pub hunger: u8,
+}
+
+impl Default for Health {
+    fn default() -> Self {
+        Self {
+            head: 100,
+            stomach: 100,
+            chest: 100,
+            left_arm: 100,
+            right_arm: 100,
+            left_leg: 100,
+            right_leg: 100,
+            hunger: 100,
+        }
+    }
 }
 
 #[derive(

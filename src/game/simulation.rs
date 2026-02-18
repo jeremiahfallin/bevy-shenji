@@ -3,6 +3,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::game::character::{CharacterInfo, Health};
 use crate::screens::Screen;
 
 /// Core simulation state tracking game time progression.
@@ -111,6 +112,18 @@ fn adjust_tick_rate(state: Res<SimulationState>, mut time: ResMut<Time<Fixed>>) 
     }
 }
 
+/// Drain hunger by 1 every 10 ticks for all characters.
+fn drain_hunger(mut characters: Query<(&mut Health, &CharacterInfo)>, sim: Res<SimulationState>) {
+    if sim.game_time % 10 != 0 {
+        return;
+    }
+    for (mut health, _info) in &mut characters {
+        if health.hunger > 0 {
+            health.hunger = health.hunger.saturating_sub(1);
+        }
+    }
+}
+
 pub fn plugin(app: &mut App) {
     app.init_resource::<SimulationState>();
     app.register_type::<SimulationState>();
@@ -132,6 +145,11 @@ pub fn plugin(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         advance_time.in_set(SimulationSystems::AdvanceTime),
+    );
+
+    app.add_systems(
+        FixedUpdate,
+        drain_hunger.in_set(SimulationSystems::UpdateEconomy),
     );
 
     // Speed controls and tick-rate adjustment run in Update (not FixedUpdate)
