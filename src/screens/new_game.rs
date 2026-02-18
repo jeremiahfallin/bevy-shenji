@@ -8,6 +8,7 @@ use bevy_immediate::{
 
 use crate::{
     game::{
+        character::CharacterInfo,
         research::ResearchState,
         resources::{BaseState, GameState, PlayerState, SquadState},
         scenarios::{apply_scenario, get_all_scenarios},
@@ -99,9 +100,10 @@ impl ImmediateAttach<CapsUi> for NewGameScreen {
                                                       mut squad: ResMut<SquadState>,
                                                       mut base: ResMut<BaseState>,
                                                       mut research: ResMut<ResearchState>,
-                                                      mut screen: ResMut<NextState<Screen>>| {
-
-                                                    apply_scenario(&mut commands, &s, &mut game, &mut player, &mut squad, &mut base, &mut research);
+                                                      mut screen: ResMut<NextState<Screen>>,
+                                                      old_chars: Query<Entity, With<CharacterInfo>>| {
+                                                    let old: Vec<Entity> = old_chars.iter().collect();
+                                                    apply_scenario(&mut commands, &s, &mut game, &mut player, &mut squad, &mut base, &mut research, &old);
                                                     screen.set(Screen::Gameplay);
                                                 })
                                         .add(|ui| { ui.ch().label("Start"); });

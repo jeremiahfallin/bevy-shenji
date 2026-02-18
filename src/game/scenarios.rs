@@ -69,7 +69,13 @@ pub fn apply_scenario(
     squad_state: &mut SquadState,
     base_state: &mut BaseState,
     research_state: &mut ResearchState,
+    old_characters: &[Entity],
 ) {
+    // Despawn any existing character entities to prevent orphans/duplicates.
+    for &entity in old_characters {
+        commands.entity(entity).despawn();
+    }
+
     game_state.reset();
     game_state.current_level = scenario.starting_level;
 

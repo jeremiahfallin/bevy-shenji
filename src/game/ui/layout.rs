@@ -1,4 +1,4 @@
-use super::{bottom_bar::BottomBar, content::Content, sidebar::Sidebar};
+use super::{bottom_bar::BottomBar, content::Content, context_menu::ContextMenuOverlay, sidebar::Sidebar};
 use crate::screens::Screen;
 use crate::theme::UiRoot;
 use crate::theme::prelude::*;
@@ -50,6 +50,17 @@ impl ImmediateAttach<CapsUi> for GameLayout {
             bottom_bar
                 .entity_commands()
                 .insert((Name::new("Bottom Bar"), BottomBar));
+        });
+
+        // 3. Context Menu Overlay (absolute positioned, floats above everything)
+        ui.ch().on_spawn_insert(|| {
+            (
+                Name::new("Context Menu Overlay"),
+                ContextMenuOverlay,
+                Visibility::default(),
+                InheritedVisibility::default(),
+                ViewVisibility::default(),
+            )
         });
     }
 }
