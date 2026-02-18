@@ -85,7 +85,23 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
             .flex_grow()
             .apply(style_panel_central)
             .p(Val::Px(15.0))
-            .add(|ui| match inspector_state.active_tab {
+            .add(|ui| {
+                // Tab bar
+                let active = inspector_state.active_tab;
+                ui.ch()
+                    .flex_row()
+                    .w_full()
+                    .mb(Val::Px(10.0))
+                    .column_gap(4.0)
+                    .add(|ui| {
+                        tab_button(ui, "Health", InspectorTab::Health, active);
+                        tab_button(ui, "Equipment", InspectorTab::Equipment, active);
+                        tab_button(ui, "Skills", InspectorTab::Skills, active);
+                        tab_button(ui, "Inventory", InspectorTab::Inventory, active);
+                    });
+
+                // Tab content
+                match inspector_state.active_tab {
                 InspectorTab::Health => {
                     // FIX: Iterate over all limbs
                     for (part, hp) in health.iter() {
@@ -160,7 +176,7 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                         }
                     }
                 }
-            });
+            }});
     }
 }
 
