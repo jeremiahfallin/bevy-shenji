@@ -38,12 +38,25 @@ pub struct ResearchDef {
     pub effects: Vec<ResearchEffect>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Reflect)]
+pub struct RecipeDef {
+    pub id: String,
+    pub name: String,
+    pub inputs: HashMap<String, u32>,
+    pub outputs: HashMap<String, u32>,
+    pub workstation: String,
+    pub time: u32,
+    pub skill: String,
+    pub required_research: Option<String>,
+}
+
 #[derive(Resource, Clone, Debug, Default, Reflect)]
 #[reflect(Resource)]
 pub struct GameData {
     pub items: HashMap<String, ItemDef>,
     pub races: Vec<SubraceDef>,
     pub research: HashMap<String, ResearchDef>,
+    pub recipes: HashMap<String, RecipeDef>,
 }
 
 impl GameData {
@@ -62,6 +75,10 @@ impl GameData {
 
     pub fn get_research(&self, id: &str) -> Option<&ResearchDef> {
         self.research.get(id)
+    }
+
+    pub fn get_recipe(&self, id: &str) -> Option<&RecipeDef> {
+        self.recipes.get(id)
     }
 }
 
@@ -84,6 +101,14 @@ fn load_game_data(mut game_data: ResMut<GameData>) {
         ron::from_str(research_str).expect("Failed to parse research.ron");
     for research in research_list {
         game_data.research.insert(research.id.clone(), research);
+    }
+
+    // Load recipes
+    let recipes_str = include_str!("../../assets/data/recipes.ron");
+    let recipe_list: Vec<RecipeDef> =
+        ron::from_str(recipes_str).expect("Failed to parse recipes.ron");
+    for recipe in recipe_list {
+        game_data.recipes.insert(recipe.id.clone(), recipe);
     }
 }
 
