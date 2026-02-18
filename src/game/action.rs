@@ -357,6 +357,55 @@ fn process_research(
     }
 }
 
+fn process_craft(
+    mut characters: Query<(&mut ActionState, &CharacterLocation)>,
+    game_data: Res<GameData>,
+    mut base_inv: ResMut<BaseInventory>,
+) {
+    for (mut state, char_loc) in &mut characters {
+        let recipe_id = match &state.current_action {
+            Some(Action::Craft { recipe_id, .. }) => recipe_id.clone(),
+            _ => continue,
+        };
+
+        // Character must be at base
+        if char_loc.location_id != "base" {
+            state.current_action = None;
+            continue;
+        }
+
+        // Look up recipe definition
+        let Some(recipe) = game_data.get_recipe(&recipe_id) else {
+            state.current_action = None;
+            continue;
+        };
+
+        // First tick: check and consume all inputs from BaseInventory
+        if state.progress.required == 0 {
+            let can_afford = recipe
+                .inputs
+                .iter()
+                .all(|(item, &amount)| base_inv.count(item) >= amount);
+            if !can_afford {
+                state.current_action = None;
+                continue;
+            }
+            for (item, &amount) in &recipe.inputs {
+                base_inv.remove(item, amount);
+            }
+            state.progress = ActionProgress::new(recipe.time);
+        }
+
+        // Tick progress; on completion produce outputs into BaseInventory
+        if state.progress.tick() {
+            for (item, &amount) in &recipe.outputs {
+                base_inv.add(item, amount);
+            }
+            state.current_action = None;
+        }
+    }
+}
+
 fn apply_skill_xp(
     mut characters: Query<(&ActionState, &mut Skills, &CharacterInfo)>,
     game_data: Res<GameData>,
@@ -405,6 +454,7 @@ pub fn plugin(app: &mut App) {
             process_collect,
             process_deposit,
             process_research,
+            process_craft,
             apply_skill_xp,
         )
             .chain()
