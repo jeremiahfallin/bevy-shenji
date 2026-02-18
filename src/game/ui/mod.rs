@@ -12,10 +12,12 @@ use crate::game::resources::UiState;
 
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<UiState>();
+    app.init_resource::<context_menu::ContextMenuState>();
     app.add_plugins((
         bottom_bar::plugin,
         character::plugin,
         content::plugin,
+        context_menu::plugin,
         sidebar::plugin,
         layout::plugin,
     ));

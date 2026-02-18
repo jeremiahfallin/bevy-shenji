@@ -1,5 +1,6 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Reflect, Serialize, Deserialize)]
 pub enum GameView {
@@ -171,5 +172,48 @@ impl Default for BasePower {
             capacity: 100,
             current: 1,
         }
+    }
+}
+
+/// Severity level for UI notifications.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
+pub enum NotificationLevel {
+    Info,
+    Success,
+    Error,
+}
+
+/// A single notification to display to the player.
+#[derive(Debug, Clone, Reflect)]
+pub struct Notification {
+    pub message: String,
+    pub level: NotificationLevel,
+    /// Remaining seconds before this notification is dismissed.
+    pub ttl: f32,
+}
+
+/// Resource that holds a queue of active notifications.
+#[derive(Resource, Debug, Default, Reflect)]
+#[reflect(Resource)]
+pub struct NotificationState {
+    pub notifications: VecDeque<Notification>,
+}
+
+impl NotificationState {
+    /// Push a new notification with a default 4-second display time.
+    pub fn push(&mut self, message: impl Into<String>, level: NotificationLevel) {
+        self.notifications.push_back(Notification {
+            message: message.into(),
+            level,
+            ttl: 4.0,
+        });
+    }
+
+    /// Tick all notification timers and remove expired ones.
+    pub fn tick(&mut self, dt: f32) {
+        for n in self.notifications.iter_mut() {
+            n.ttl -= dt;
+        }
+        self.notifications.retain(|n| n.ttl > 0.0);
     }
 }

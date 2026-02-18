@@ -1,3 +1,4 @@
+use super::character::Squad;
 use super::research::ResearchState;
 use super::resources::{BaseState, GameState, PlayerState, SquadState};
 use bevy::prelude::*;
@@ -68,7 +69,13 @@ pub fn apply_scenario(
     squad_state: &mut SquadState,
     base_state: &mut BaseState,
     research_state: &mut ResearchState,
+    old_characters: &[Entity],
 ) {
+    // Despawn any existing character entities to prevent orphans/duplicates.
+    for &entity in old_characters {
+        commands.entity(entity).despawn();
+    }
+
     game_state.reset();
     game_state.current_level = scenario.starting_level;
 
@@ -95,7 +102,14 @@ pub fn apply_scenario(
         );
 
         // Spawn the entity
-        let entity = commands.spawn(bundle).id();
+        let mut entity_commands = commands.spawn(bundle);
+
+        // Set the Squad component to match the template's squad assignment
+        if template.starting_squad > 0 {
+            entity_commands.insert(Squad(template.starting_squad));
+        }
+
+        let entity = entity_commands.id();
 
         // Register in SquadState
         squad_state.add_character(id.clone(), entity);
