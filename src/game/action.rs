@@ -7,7 +7,7 @@ use crate::game::character::{CharacterInfo, CharacterLocation, Inventory, Skills
 use crate::game::data::{GameData, ResearchEffect};
 use crate::game::location::{LocationInfo, LocationInventory, LocationRegistry, LocationResources};
 use crate::game::research::ResearchState;
-use crate::game::resources::{BaseInventory, BaseState};
+use crate::game::resources::{BaseInventory, BaseState, NotificationLevel, NotificationState};
 
 /// A single action a character can perform
 #[derive(Clone, Debug, Serialize, Deserialize, Reflect, PartialEq)]
@@ -458,6 +458,50 @@ fn process_build(
     }
 }
 
+fn process_explore(
+    mut characters: Query<(&mut ActionState, &Skills)>,
+    mut locations: Query<&mut LocationInfo>,
+    mut notifications: ResMut<NotificationState>,
+) {
+    for (mut state, skills) in &mut characters {
+        if !matches!(&state.current_action, Some(Action::Explore)) {
+            continue;
+        }
+
+        // Initialize progress based on scouting skill
+        if state.progress.required == 0 {
+            let required = (200u32).saturating_sub(skills.scouting * 5).max(50);
+            state.progress = ActionProgress::new(required);
+        }
+
+        if state.progress.tick() {
+            // Find the first undiscovered location and mark it as discovered
+            let mut discovered_name = None;
+            for mut loc_info in &mut locations {
+                if !loc_info.discovered {
+                    loc_info.discovered = true;
+                    discovered_name = Some(loc_info.name.clone());
+                    break;
+                }
+            }
+
+            if let Some(name) = discovered_name {
+                notifications.push(
+                    format!("Discovered: {}", name),
+                    NotificationLevel::Success,
+                );
+            } else {
+                notifications.push(
+                    "Exploration complete - no new locations found",
+                    NotificationLevel::Info,
+                );
+            }
+
+            state.current_action = None;
+        }
+    }
+}
+
 fn apply_skill_xp(
     mut characters: Query<(&ActionState, &mut Skills, &CharacterInfo)>,
     game_data: Res<GameData>,
@@ -508,6 +552,7 @@ pub fn plugin(app: &mut App) {
             process_research,
             process_craft,
             process_build,
+            process_explore,
             apply_skill_xp,
         )
             .chain()
