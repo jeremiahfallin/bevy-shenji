@@ -3,9 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
 use crate::game::character::{CharacterInfo, CharacterLocation, Inventory, Skills};
-use crate::game::data::GameData;
+use crate::game::data::{GameData, ResearchEffect};
 use crate::game::location::{LocationInfo, LocationInventory, LocationRegistry, LocationResources};
-use crate::game::resources::BaseInventory;
+use crate::game::research::ResearchState;
+use crate::game::resources::{BaseInventory, BaseState};
 
 /// A single action a character can perform
 #[derive(Clone, Debug, Serialize, Deserialize, Reflect, PartialEq)]
@@ -277,6 +278,85 @@ fn process_deposit(
     }
 }
 
+fn process_research(
+    mut characters: Query<(&mut ActionState, &CharacterLocation, &Skills)>,
+    mut research_state: ResMut<ResearchState>,
+    game_data: Res<GameData>,
+    mut base_inventory: ResMut<BaseInventory>,
+    mut base_state: ResMut<BaseState>,
+) {
+    for (mut state, char_location, skills) in &mut characters {
+        let tech_id = match &state.current_action {
+            Some(Action::Research { tech_id }) => tech_id.clone(),
+            _ => continue,
+        };
+
+        // Character must be at base to research
+        if char_location.location_id != "base" {
+            state.current_action = None;
+            continue;
+        }
+
+        // Look up the research definition
+        let Some(def) = game_data.get_research(&tech_id) else {
+            state.current_action = None;
+            continue;
+        };
+
+        // If the global current_research doesn't match, try to start new research
+        if research_state.current_research.as_deref() != Some(&tech_id) {
+            // Check prerequisites and that it isn't already unlocked
+            if !research_state.can_research(&tech_id, &game_data) {
+                state.current_action = None;
+                continue;
+            }
+
+            // Check and deduct costs from BaseInventory
+            let can_afford = def
+                .cost
+                .iter()
+                .all(|(item_id, &amount)| base_inventory.count(item_id) >= amount);
+            if !can_afford {
+                state.current_action = None;
+                continue;
+            }
+            for (item_id, &amount) in &def.cost {
+                base_inventory.remove(item_id, amount);
+            }
+
+            // Start this research
+            research_state.current_research = Some(tech_id.clone());
+            research_state.research_progress = 0;
+        }
+
+        // Science skill provides a speed bonus: base 1 tick + 1 per 20 science skill
+        let speed_bonus = 1 + (skills.science / 20);
+        research_state.research_progress += speed_bonus;
+
+        // Check if research is complete
+        if research_state.research_progress >= def.time {
+            research_state.unlocked.insert(tech_id.clone());
+
+            // Apply effects
+            for effect in &def.effects {
+                match effect {
+                    ResearchEffect::SetsTechLevel(level) => {
+                        base_state.value.tech_level = *level;
+                    }
+                    ResearchEffect::UnlocksBuilding(_) | ResearchEffect::UnlocksRecipe(_) => {
+                        // These are checked by other systems via ResearchState::unlocked
+                    }
+                }
+            }
+
+            // Clear current research
+            research_state.current_research = None;
+            research_state.research_progress = 0;
+            state.current_action = None;
+        }
+    }
+}
+
 fn apply_skill_xp(
     mut characters: Query<(&ActionState, &mut Skills, &CharacterInfo)>,
     game_data: Res<GameData>,
@@ -324,6 +404,7 @@ pub fn plugin(app: &mut App) {
             process_gather,
             process_collect,
             process_deposit,
+            process_research,
             apply_skill_xp,
         )
             .chain()
