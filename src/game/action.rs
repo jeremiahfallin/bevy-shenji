@@ -103,6 +103,33 @@ impl ActionState {
     }
 }
 
+/// Create a gather job that travels to a location, gathers a resource,
+/// collects it, travels back to base, and deposits it.
+pub fn make_gather_job(location_id: &str, resource: &str) -> Job {
+    Job {
+        name: format!("Gather {}", resource),
+        actions: vec![
+            Action::Travel {
+                destination: location_id.to_string(),
+            },
+            Action::Gather {
+                location: location_id.to_string(),
+                resource: resource.to_string(),
+            },
+            Action::Collect {
+                location: location_id.to_string(),
+                item: resource.to_string(),
+            },
+            Action::Travel {
+                destination: "base".to_string(),
+            },
+            Action::Deposit {
+                item: resource.to_string(),
+            },
+        ],
+    }
+}
+
 fn dequeue_actions(mut characters: Query<&mut ActionState>) {
     for mut state in &mut characters {
         if state.current_action.is_some() {

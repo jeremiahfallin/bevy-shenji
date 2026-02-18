@@ -1,5 +1,6 @@
-use crate::game::action::{Action, ActionState};
+use crate::game::action::{Action, ActionState, make_gather_job};
 use crate::game::character::{Equipment, Health, Inventory, Skills};
+use crate::game::location::{LocationInfo, LocationResources};
 use crate::game::resources::SquadState;
 use crate::theme::prelude::*;
 use bevy::ecs::system::SystemParam;
@@ -11,6 +12,8 @@ use bevy_immediate::{Imm, attach::ImmediateAttach, ui::CapsUi};
 pub struct InspectorState {
     pub selected_character_id: Option<String>,
     pub active_tab: InspectorTab,
+    /// Sub-mode for the Jobs tab when picking a gather location.
+    pub job_picker_mode: JobPickerMode,
 }
 
 #[derive(Default, PartialEq, Eq, Clone, Copy)]
@@ -20,6 +23,14 @@ pub enum InspectorTab {
     Equipment,
     Skills,
     Inventory,
+    Jobs,
+}
+
+#[derive(Default, PartialEq, Eq, Clone, Copy)]
+pub enum JobPickerMode {
+    #[default]
+    None,
+    GatherPicker,
 }
 
 // The UI Widget Component
@@ -49,6 +60,7 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                 &'static ActionState,
             ),
         >,
+        Query<'static, 'static, (&'static LocationInfo, Option<&'static LocationResources>)>,
     );
 
     fn construct(
@@ -57,9 +69,11 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
             Res<SquadState>,
             Res<InspectorState>,
             Query<(&Health, &Skills, &Equipment, &Inventory, &ActionState)>,
+            Query<(&LocationInfo, Option<&LocationResources>)>,
         ),
     ) {
-        let (squad_state, inspector_state, char_query) = (&params.0, &params.1, &params.2);
+        let (squad_state, inspector_state, char_query, location_query) =
+            (&params.0, &params.1, &params.2, &params.3);
 
         // 1. Validation: Do we have a selected character?
         let Some(char_entity) = &inspector_state.selected_character_id else {
@@ -83,6 +97,23 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
         };
 
         let entity_id = *entity;
+
+        // Collect gather location data for job picker
+        let gather_locations: Vec<(String, String, String)> = location_query
+            .iter()
+            .filter(|(info, res)| info.discovered && res.is_some())
+            .filter_map(|(info, res)| {
+                let res = res?;
+                if res.resource_type.is_empty() || res.current_amount == 0 {
+                    return None;
+                }
+                Some((
+                    info.id.clone(),
+                    info.name.clone(),
+                    res.resource_type.clone(),
+                ))
+            })
+            .collect();
 
         // 3. Render Inspector
         ui.ch()
@@ -119,12 +150,12 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                         tab_button(ui, "Equipment", InspectorTab::Equipment, active);
                         tab_button(ui, "Skills", InspectorTab::Skills, active);
                         tab_button(ui, "Inventory", InspectorTab::Inventory, active);
+                        tab_button(ui, "Jobs", InspectorTab::Jobs, active);
                     });
 
                 // Tab content
                 match inspector_state.active_tab {
                 InspectorTab::Health => {
-                    // FIX: Iterate over all limbs
                     for (part, hp) in health.iter() {
                         ui.ch()
                             .flex_row()
@@ -133,7 +164,6 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                             .mb(Val::Px(5.0))
                             .add(|ui| {
                                 ui.ch().label(part).text_color(Color::srgb(0.8, 0.8, 0.8));
-                                // Color scaling
                                 let color = if hp > 80 {
                                     Color::srgb(0.0, 1.0, 0.0)
                                 } else if hp > 40 {
@@ -148,7 +178,6 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                     ui.ch().label(format!("Hunger: {}", health.hunger));
                 }
                 InspectorTab::Equipment => {
-                    // FIX: Use the display_equip_slot helper
                     let eq = equipment;
                     display_equip_slot(ui, "Head", &eq.head);
                     display_equip_slot(ui, "Chest", &eq.chest);
@@ -194,6 +223,15 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                             });
                         }
                     }
+                }
+                InspectorTab::Jobs => {
+                    render_jobs_tab(
+                        ui,
+                        entity_id,
+                        action_state,
+                        &gather_locations,
+                        inspector_state.job_picker_mode,
+                    );
                 }
             }});
     }
@@ -340,6 +378,170 @@ fn render_action_status(ui: &mut Imm<CapsUi>, entity_id: Entity, action_state: &
     });
 }
 
+/// Render the Jobs tab content.
+fn render_jobs_tab(
+    ui: &mut Imm<CapsUi>,
+    entity_id: Entity,
+    action_state: &ActionState,
+    gather_locations: &[(String, String, String)],
+    picker_mode: JobPickerMode,
+) {
+    ui.ch().flex_col().w_full().h_full().add(|ui| {
+        // Current jobs list
+        if action_state.job_queue.is_empty() {
+            ui.ch()
+                .label("No jobs assigned")
+                .text_color(Color::srgb(0.5, 0.5, 0.5))
+                .mb(Val::Px(8.0));
+        } else {
+            ui.ch()
+                .label("Job Queue:")
+                .text_size(13.0)
+                .text_color(Color::srgb(0.8, 0.8, 0.8))
+                .mb(Val::Px(4.0));
+
+            for (i, job) in action_state.job_queue.iter().enumerate() {
+                let is_current = action_state.current_job_index > 0
+                    && (action_state.current_job_index - 1) % action_state.job_queue.len() == i;
+
+                ui.ch()
+                    .flex_row()
+                    .w_full()
+                    .justify_between()
+                    .mb(Val::Px(2.0))
+                    .add(|ui| {
+                        let prefix = if is_current { "> " } else { "  " };
+                        let color = if is_current {
+                            Color::WHITE
+                        } else {
+                            Color::srgb(0.7, 0.7, 0.7)
+                        };
+                        ui.ch()
+                            .label(format!(
+                                "{}{}. {} ({} steps)",
+                                prefix,
+                                i + 1,
+                                job.name,
+                                job.actions.len()
+                            ))
+                            .text_size(12.0)
+                            .text_color(color);
+                    });
+            }
+        }
+
+        // Divider
+        ui.ch().on_spawn_insert(|| {
+            (
+                Node {
+                    height: Val::Px(1.0),
+                    width: Val::Percent(100.0),
+                    margin: UiRect::axes(Val::Px(0.0), Val::Px(6.0)),
+                    ..default()
+                },
+                BackgroundColor(GRAY_700),
+            )
+        });
+
+        // Job assignment buttons
+        match picker_mode {
+            JobPickerMode::None => {
+                // "Add Gather Job" button
+                if !gather_locations.is_empty() {
+                    ui.ch()
+                        .button()
+                        .w_full()
+                        .style(|n: &mut Node| {
+                            n.padding = UiRect::axes(Val::Px(8.0), Val::Px(4.0));
+                        })
+                        .bg(GRAY_700)
+                        .on_click_once(
+                            move |_: On<Pointer<Click>>,
+                                  mut inspector: ResMut<InspectorState>| {
+                                inspector.job_picker_mode = JobPickerMode::GatherPicker;
+                            },
+                        )
+                        .add(|ui| {
+                            ui.ch()
+                                .label("+ Add Gather Job")
+                                .text_size(12.0)
+                                .text_color(GRAY_100);
+                        });
+                } else {
+                    ui.ch()
+                        .label("No resource locations available")
+                        .text_size(11.0)
+                        .text_color(Color::srgb(0.5, 0.5, 0.5));
+                }
+            }
+
+            JobPickerMode::GatherPicker => {
+                ui.ch()
+                    .label("Select resource to gather:")
+                    .text_size(12.0)
+                    .text_color(Color::srgb(0.8, 0.8, 0.8))
+                    .mb(Val::Px(4.0));
+
+                // Back button
+                ui.ch()
+                    .button()
+                    .w_full()
+                    .style(|n: &mut Node| {
+                        n.padding = UiRect::axes(Val::Px(8.0), Val::Px(3.0));
+                    })
+                    .bg(GRAY_700)
+                    .mb(Val::Px(2.0))
+                    .on_click_once(
+                        move |_: On<Pointer<Click>>,
+                              mut inspector: ResMut<InspectorState>| {
+                            inspector.job_picker_mode = JobPickerMode::None;
+                        },
+                    )
+                    .add(|ui| {
+                        ui.ch()
+                            .label("<- Back")
+                            .text_size(12.0)
+                            .text_color(GRAY_100);
+                    });
+
+                // List all gather locations
+                for (loc_id, loc_name, resource) in gather_locations {
+                    let entity = entity_id;
+                    let location = loc_id.clone();
+                    let res = resource.clone();
+                    let label = format!("{} ({})", loc_name, resource);
+
+                    ui.ch()
+                        .button()
+                        .w_full()
+                        .style(|n: &mut Node| {
+                            n.padding = UiRect::axes(Val::Px(8.0), Val::Px(3.0));
+                        })
+                        .bg(GRAY_700)
+                        .mb(Val::Px(2.0))
+                        .on_click_once(
+                            move |_: On<Pointer<Click>>,
+                                  mut inspector: ResMut<InspectorState>,
+                                  mut action_query: Query<&mut ActionState>| {
+                                if let Ok(mut action_state) = action_query.get_mut(entity) {
+                                    let job = make_gather_job(&location, &res);
+                                    action_state.job_queue.push(job);
+                                }
+                                inspector.job_picker_mode = JobPickerMode::None;
+                            },
+                        )
+                        .add(|ui| {
+                            ui.ch()
+                                .label(&label)
+                                .text_size(12.0)
+                                .text_color(GRAY_100);
+                        });
+                }
+            }
+        }
+    });
+}
+
 /// Format an action for display.
 fn format_action(action: &Action) -> String {
     match action {
@@ -368,6 +570,8 @@ fn tab_button(ui: &mut Imm<CapsUi>, text: &str, tab: InspectorTab, active: Inspe
         .on_click_once(
             move |_trigger: On<Pointer<Click>>, mut state: ResMut<InspectorState>| {
                 state.active_tab = tab;
+                // Reset picker mode when switching tabs
+                state.job_picker_mode = JobPickerMode::None;
             },
         )
         .style(move |n| {
