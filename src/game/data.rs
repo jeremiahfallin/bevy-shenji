@@ -41,7 +41,22 @@ impl GameData {
     }
 }
 
+fn load_game_data(mut game_data: ResMut<GameData>) {
+    // Load items
+    let items_str = include_str!("../../assets/data/items.ron");
+    let items: Vec<ItemDef> = ron::from_str(items_str).expect("Failed to parse items.ron");
+    for item in items {
+        game_data.items.insert(item.id.clone(), item);
+    }
+
+    // Load races
+    let races_str = include_str!("../../assets/data/races.ron");
+    let races: Vec<SubraceDef> = ron::from_str(races_str).expect("Failed to parse races.ron");
+    game_data.races = races;
+}
+
 pub fn plugin(app: &mut App) {
     app.insert_resource(GameData::default())
-        .register_type::<GameData>();
+        .register_type::<GameData>()
+        .add_systems(Startup, load_game_data);
 }
