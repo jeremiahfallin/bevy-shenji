@@ -2,7 +2,8 @@ use super::character::Squad;
 use super::data::GameData;
 use super::location::{LocationInfo, LocationInventory, LocationRegistry, LocationResources};
 use super::research::ResearchState;
-use super::resources::{BaseState, GameState, PlayerState, SquadState};
+use super::resources::{BaseInventory, BaseState, GameState, PlayerState, SquadState};
+use super::simulation::SimulationState;
 use bevy::prelude::*;
 
 #[derive(Debug, Clone)]
@@ -71,10 +72,13 @@ pub fn apply_scenario(
     squad_state: &mut SquadState,
     base_state: &mut BaseState,
     research_state: &mut ResearchState,
+    sim_state: &mut SimulationState,
+    base_inventory: &mut BaseInventory,
     old_characters: &[Entity],
     game_data: &GameData,
     location_registry: &mut LocationRegistry,
     old_locations: &[Entity],
+    old_buildings: &[Entity],
 ) {
     // Despawn any existing character entities to prevent orphans/duplicates.
     for &entity in old_characters {
@@ -87,6 +91,12 @@ pub fn apply_scenario(
     }
     location_registry.locations.clear();
 
+    // Despawn any existing building entities.
+    for &entity in old_buildings {
+        commands.entity(entity).despawn();
+    }
+
+    // Reset all game state
     game_state.reset();
     game_state.current_level = scenario.starting_level;
 
@@ -97,6 +107,27 @@ pub fn apply_scenario(
     *squad_state = SquadState::default();
     *base_state = BaseState::default();
     *research_state = ResearchState::default();
+
+    // Reset simulation state to fresh defaults
+    *sim_state = SimulationState::default();
+
+    // Reset base inventory and give starting items based on scenario
+    *base_inventory = BaseInventory::default();
+    match scenario.id.as_str() {
+        "lone_wanderer" => {
+            base_inventory.add("zeni", 500);
+            base_inventory.add("bread", 10);
+            base_inventory.add("books", 2);
+        }
+        "squad_up" => {
+            base_inventory.add("zeni", 1000);
+            base_inventory.add("bread", 20);
+            base_inventory.add("books", 5);
+            base_inventory.add("lumber", 10);
+            base_inventory.add("stone", 10);
+        }
+        _ => {}
+    }
 
     for template in &scenario.starting_characters {
         // Generate a new ID for the character
