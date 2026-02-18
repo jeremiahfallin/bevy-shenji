@@ -9,6 +9,7 @@ pub enum GameView {
     Research,
     Squads,
     Characters,
+    Locations,
 }
 
 #[derive(Resource, Default, Debug, Reflect)]

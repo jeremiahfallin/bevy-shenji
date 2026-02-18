@@ -64,6 +64,7 @@ impl ImmediateAttach<CapsUi> for Sidebar {
                     nav_btn("Research", Icon::Book, GameView::Research);
                     nav_btn("Squads", Icon::Group, GameView::Squads);
                     nav_btn("Characters", Icon::User, GameView::Characters);
+                    nav_btn("Locations", Icon::Map, GameView::Locations);
                 });
 
                 // Simulation info
