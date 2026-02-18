@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
+use crate::game::building::Building;
 use crate::game::character::{CharacterInfo, CharacterLocation, Inventory, Skills};
 use crate::game::data::{GameData, ResearchEffect};
 use crate::game::location::{LocationInfo, LocationInventory, LocationRegistry, LocationResources};
@@ -406,6 +407,57 @@ fn process_craft(
     }
 }
 
+fn process_build(
+    mut characters: Query<(&mut ActionState, &CharacterLocation)>,
+    mut buildings: Query<&mut Building>,
+) {
+    for (mut state, char_loc) in &mut characters {
+        let building_id = match &state.current_action {
+            Some(Action::Build { building }) => building.clone(),
+            _ => continue,
+        };
+
+        // Character must be at base
+        if char_loc.location_id != "base" {
+            state.current_action = None;
+            continue;
+        }
+
+        // Find an incomplete Building entity with matching def_id
+        let mut found = false;
+        for mut building in &mut buildings {
+            if building.def_id == building_id && !building.complete {
+                // Contribute 1 progress per tick
+                building.progress += 1;
+                if building.progress >= building.required {
+                    building.complete = true;
+                }
+                found = true;
+                break;
+            }
+        }
+
+        if !found {
+            // No matching incomplete building found; cancel action
+            state.current_action = None;
+            continue;
+        }
+
+        // Check if the building we just worked on is now complete
+        let mut done = false;
+        for building in &buildings {
+            if building.def_id == building_id && building.complete {
+                done = true;
+                break;
+            }
+        }
+
+        if done {
+            state.current_action = None;
+        }
+    }
+}
+
 fn apply_skill_xp(
     mut characters: Query<(&ActionState, &mut Skills, &CharacterInfo)>,
     game_data: Res<GameData>,
@@ -455,6 +507,7 @@ pub fn plugin(app: &mut App) {
             process_deposit,
             process_research,
             process_craft,
+            process_build,
             apply_skill_xp,
         )
             .chain()

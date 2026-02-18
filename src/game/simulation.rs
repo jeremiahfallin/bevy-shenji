@@ -3,7 +3,10 @@ use std::time::Duration;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::game::building::Building;
 use crate::game::character::{CharacterInfo, Health};
+use crate::game::data::GameData;
+use crate::game::resources::BaseState;
 use crate::screens::Screen;
 
 /// Core simulation state tracking game time progression.
@@ -124,6 +127,36 @@ fn drain_hunger(mut characters: Query<(&mut Health, &CharacterInfo)>, sim: Res<S
     }
 }
 
+/// Sum power generation across all completed buildings and update BaseState.power.
+fn update_power_grid(
+    buildings: Query<&Building>,
+    game_data: Res<GameData>,
+    mut base_state: ResMut<BaseState>,
+) {
+    let mut total_generation: i32 = 0;
+    let mut total_consumption: i32 = 0;
+
+    for building in &buildings {
+        if !building.complete {
+            continue;
+        }
+        if let Some(def) = game_data.get_building(&building.def_id) {
+            if def.power_generation > 0 {
+                total_generation += def.power_generation;
+            } else if def.power_generation < 0 {
+                total_consumption += def.power_generation.abs();
+            }
+        }
+    }
+
+    base_state.power.generation = total_generation.max(0) as u32;
+    base_state.power.consumption = total_consumption.max(0) as u32;
+    base_state.power.current = base_state
+        .power
+        .generation
+        .saturating_sub(base_state.power.consumption);
+}
+
 pub fn plugin(app: &mut App) {
     app.init_resource::<SimulationState>();
     app.register_type::<SimulationState>();
@@ -149,7 +182,7 @@ pub fn plugin(app: &mut App) {
 
     app.add_systems(
         FixedUpdate,
-        drain_hunger.in_set(SimulationSystems::UpdateEconomy),
+        (drain_hunger, update_power_grid).in_set(SimulationSystems::UpdateEconomy),
     );
 
     // Speed controls and tick-rate adjustment run in Update (not FixedUpdate)
