@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
-use crate::game::character::{CharacterLocation, Inventory};
+use crate::game::character::{CharacterLocation, Inventory, Skills};
 use crate::game::location::{LocationInfo, LocationInventory, LocationRegistry, LocationResources};
 use crate::game::resources::BaseInventory;
 
@@ -276,6 +276,37 @@ fn process_deposit(
     }
 }
 
+fn apply_skill_xp(mut characters: Query<(&ActionState, &mut Skills)>) {
+    for (state, mut skills) in &mut characters {
+        let Some(ref action) = state.current_action else {
+            continue;
+        };
+        match action {
+            Action::Gather { .. } => {
+                skills.labouring = skills.labouring.saturating_add(1);
+            }
+            Action::Research { .. } => {
+                skills.science = skills.science.saturating_add(1);
+            }
+            Action::Explore => {
+                skills.scouting = skills.scouting.saturating_add(1);
+                skills.athletics = skills.athletics.saturating_add(1);
+            }
+            Action::Travel { .. } => {
+                skills.athletics = skills.athletics.saturating_add(1);
+            }
+            Action::Craft { .. } => {
+                // Will be refined later when we know which skill the recipe uses
+                skills.labouring = skills.labouring.saturating_add(1);
+            }
+            Action::Build { .. } => {
+                skills.engineer = skills.engineer.saturating_add(1);
+            }
+            _ => {}
+        }
+    }
+}
+
 pub fn plugin(app: &mut App) {
     app.register_type::<ActionState>();
 
@@ -287,6 +318,7 @@ pub fn plugin(app: &mut App) {
             process_gather,
             process_collect,
             process_deposit,
+            apply_skill_xp,
         )
             .chain()
             .in_set(crate::game::simulation::SimulationSystems::ProcessActions),

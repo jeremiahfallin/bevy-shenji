@@ -136,7 +136,7 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                                     .add(|ui| {
                                         ui.ch().label(skill).text_color(Color::srgb(0.8, 0.8, 0.8));
                                         ui.ch()
-                                            .label(format!("{}", xp_to_level(xp.into())))
+                                            .label(format!("{}", xp_to_level(xp)))
                                             .text_color(Color::WHITE);
                                     });
                             }
@@ -190,7 +190,8 @@ fn tab_button(ui: &mut Imm<CapsUi>, text: &str, tab: InspectorTab, active: Inspe
 
 // Helper: Math
 fn xp_to_level(xp: u32) -> u32 {
-    (xp as f32).sqrt() as u32
+    let xp = xp as f64;
+    ((xp * 4.0 / 5.0).cbrt().floor() as u32 + 1).min(100)
 }
 
 fn display_equip_slot(ui: &mut Imm<CapsUi>, slot_name: &str, item: &Option<String>) {
