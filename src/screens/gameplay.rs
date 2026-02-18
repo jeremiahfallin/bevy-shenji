@@ -12,6 +12,7 @@ use bevy_immediate::{
 
 use crate::{
     Pause,
+    game::simulation::SimulationState,
     game::ui::spawn_game_layout,
     menus::Menu,
     screens::Screen,
@@ -76,12 +77,17 @@ fn spawn_pause_overlay(mut commands: Commands, ui_root: Res<UiRoot>) {
     commands.entity(ui_root.0).add_child(overlay);
 }
 
-fn unpause(mut next_pause: ResMut<NextState<Pause>>) {
+fn unpause(mut next_pause: ResMut<NextState<Pause>>, mut sim: ResMut<SimulationState>) {
     next_pause.set(Pause(false));
+    // Restore simulation to running (speed 1) when leaving pause menu.
+    if sim.is_paused() {
+        sim.set_speed(1);
+    }
 }
 
-fn pause(mut next_pause: ResMut<NextState<Pause>>) {
+fn pause(mut next_pause: ResMut<NextState<Pause>>, mut sim: ResMut<SimulationState>) {
     next_pause.set(Pause(true));
+    sim.pause();
 }
 
 fn open_pause_menu(mut next_menu: ResMut<NextState<Menu>>) {

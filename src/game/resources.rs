@@ -21,13 +21,11 @@ pub struct UiState {
 #[reflect(Resource)]
 pub struct GameState {
     pub current_level: u32,
-    pub is_paused: bool,
 }
 
 impl GameState {
     pub fn reset(&mut self) {
         self.current_level = 0;
-        self.is_paused = false;
     }
 }
 

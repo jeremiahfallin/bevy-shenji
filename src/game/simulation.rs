@@ -1,5 +1,9 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
+
+use crate::screens::Screen;
 
 /// Core simulation state tracking game time progression.
 #[derive(Resource, Debug, Clone, Reflect, Serialize, Deserialize)]
@@ -78,6 +82,35 @@ fn advance_time(mut state: ResMut<SimulationState>) {
     }
 }
 
+/// Handle keyboard shortcuts for simulation speed control.
+/// Space: toggle pause, Digit1: 1x, Digit2: 2x, Digit3: 5x.
+fn speed_controls(input: Res<ButtonInput<KeyCode>>, mut state: ResMut<SimulationState>) {
+    if input.just_pressed(KeyCode::Space) {
+        state.toggle_pause();
+    }
+    if input.just_pressed(KeyCode::Digit1) {
+        state.set_speed(1);
+    }
+    if input.just_pressed(KeyCode::Digit2) {
+        state.set_speed(2);
+    }
+    if input.just_pressed(KeyCode::Digit3) {
+        state.set_speed(5);
+    }
+}
+
+/// Adjust the `FixedUpdate` timestep when simulation speed changes.
+fn adjust_tick_rate(state: Res<SimulationState>, mut time: ResMut<Time<Fixed>>) {
+    if state.is_changed() {
+        if state.is_paused() {
+            // When paused, FixedUpdate systems are gated by simulation_not_paused
+            // so there is nothing to adjust here — just leave the timestep as-is.
+        } else {
+            time.set_timestep(Duration::from_secs_f64(1.0 / state.speed as f64));
+        }
+    }
+}
+
 pub fn plugin(app: &mut App) {
     app.init_resource::<SimulationState>();
     app.register_type::<SimulationState>();
@@ -99,5 +132,13 @@ pub fn plugin(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         advance_time.in_set(SimulationSystems::AdvanceTime),
+    );
+
+    // Speed controls and tick-rate adjustment run in Update (not FixedUpdate)
+    // so they are responsive even while paused, and only during gameplay.
+    app.add_systems(
+        Update,
+        (speed_controls, adjust_tick_rate)
+            .run_if(in_state(Screen::Gameplay)),
     );
 }
