@@ -93,6 +93,12 @@ pub struct CharacterInfo {
     pub location: String,
 }
 
+#[derive(Component, Clone, Debug, Default, Serialize, Deserialize, Reflect)]
+#[reflect(Component)]
+pub struct CharacterLocation {
+    pub location_id: String,
+}
+
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default, Reflect, Serialize, Deserialize)]
 #[reflect(Component)]
 pub struct Inventory {
@@ -114,6 +120,7 @@ pub struct CharacterBundle {
     pub inventory: Inventory,
     pub squad: Squad,
     pub action_state: ActionState,
+    pub character_location: CharacterLocation,
 }
 
 impl Health {
@@ -173,6 +180,7 @@ impl Skills {
 
 impl CharacterBundle {
     pub fn new(id: String, name: String, race: String, subrace: String, location: String) -> Self {
+        let location_id = location.clone();
         Self {
             info: CharacterInfo {
                 id,
@@ -189,6 +197,9 @@ impl CharacterBundle {
             },
             squad: Squad(0),
             action_state: ActionState::default(),
+            character_location: CharacterLocation {
+                location_id,
+            },
         }
     }
 }

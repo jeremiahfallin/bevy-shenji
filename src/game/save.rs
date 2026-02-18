@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::game::action::ActionState;
 use crate::game::character::{
-    CharacterBundle, CharacterInfo, Equipment, Health, Inventory, Skills, Squad,
+    CharacterBundle, CharacterInfo, CharacterLocation, Equipment, Health, Inventory, Skills, Squad,
 };
 use crate::game::research::ResearchState;
 use crate::game::resources::{
@@ -60,6 +60,8 @@ pub struct SerializedCharacter {
     pub squad: Squad,
     #[serde(default)]
     pub action_state: ActionState,
+    #[serde(default)]
+    pub character_location: CharacterLocation,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -106,11 +108,14 @@ fn save_game(
         &Inventory,
         &Squad,
         &ActionState,
+        &CharacterLocation,
     )>,
 ) {
     for message in events.drain() {
         let mut serialized_characters = Vec::new();
-        for (info, health, skills, equip, inv, squad, action_state) in character_query.iter() {
+        for (info, health, skills, equip, inv, squad, action_state, char_location) in
+            character_query.iter()
+        {
             serialized_characters.push(SerializedCharacter {
                 info: info.clone(),
                 health: *health,
@@ -119,6 +124,7 @@ fn save_game(
                 inventory: inv.clone(),
                 squad: *squad,
                 action_state: action_state.clone(),
+                character_location: char_location.clone(),
             });
         }
 
@@ -265,6 +271,7 @@ fn poll_load_game(
                                 inventory: char_data.inventory,
                                 squad: char_data.squad,
                                 action_state: char_data.action_state,
+                                character_location: char_data.character_location,
                             })
                             .id();
                         squad_state.characters.insert(id, entity);

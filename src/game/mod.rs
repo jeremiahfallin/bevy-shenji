@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 pub mod action;
 pub mod character;
+pub mod location;
 pub mod research;
 pub mod resources;
 pub mod save;
@@ -28,6 +29,7 @@ pub fn plugin(app: &mut App) {
     app.add_systems(Update, tick_notifications);
 
     action::plugin(app);
+    location::plugin(app);
     simulation::plugin(app);
     app.add_plugins(save::plugin);
     app.add_plugins(ui::plugin);

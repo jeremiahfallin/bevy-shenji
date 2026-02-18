@@ -1,23 +1,52 @@
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
+#[derive(Clone, Debug, Serialize, Deserialize, Reflect, PartialEq, Eq, Hash, Default)]
 pub enum LocationType {
-    Village,
-    City,
+    #[default]
+    Base,
+    Mine,
+    Forest,
     Ruins,
+    City,
     Wilderness,
 }
 
-#[derive(Component, Debug, Clone, Reflect)]
+#[derive(Component, Clone, Debug, Serialize, Deserialize, Reflect)]
 #[reflect(Component)]
-pub struct Location {
+pub struct LocationInfo {
     pub id: String,
     pub name: String,
     pub loc_type: LocationType,
+    pub distance: u32,
 }
 
-impl Location {
-    pub fn new(id: String, name: String, loc_type: LocationType) -> Self {
-        Self { id, name, loc_type }
-    }
+#[derive(Component, Clone, Debug, Default, Serialize, Deserialize, Reflect)]
+#[reflect(Component)]
+pub struct LocationResources {
+    pub resource_type: String,
+    pub capacity: u32,
+    pub yield_rate: u32,
+    pub current_amount: u32,
+}
+
+#[derive(Component, Clone, Debug, Default, Serialize, Deserialize, Reflect)]
+#[reflect(Component)]
+pub struct LocationInventory {
+    pub items: HashMap<String, u32>,
+}
+
+#[derive(Resource, Reflect, Default)]
+#[reflect(Resource)]
+pub struct LocationRegistry {
+    pub locations: HashMap<String, Entity>,
+}
+
+pub fn plugin(app: &mut App) {
+    app.register_type::<LocationInfo>()
+        .register_type::<LocationResources>()
+        .register_type::<LocationInventory>()
+        .insert_resource(LocationRegistry::default())
+        .register_type::<LocationRegistry>();
 }

@@ -2,6 +2,8 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
+use crate::game::character::CharacterLocation;
+
 /// A single action a character can perform
 #[derive(Clone, Debug, Serialize, Deserialize, Reflect, PartialEq)]
 pub enum Action {
@@ -129,11 +131,29 @@ fn dequeue_actions(mut characters: Query<&mut ActionState>) {
     }
 }
 
+fn process_travel(mut characters: Query<(&mut ActionState, &mut CharacterLocation)>) {
+    for (mut state, mut location) in &mut characters {
+        let destination = match &state.current_action {
+            Some(Action::Travel { destination }) => destination.clone(),
+            _ => continue,
+        };
+        if state.progress.required == 0 {
+            state.progress = ActionProgress::new(30); // default 30 ticks
+        }
+        if state.progress.tick() {
+            location.location_id = destination;
+            state.current_action = None;
+        }
+    }
+}
+
 pub fn plugin(app: &mut App) {
     app.register_type::<ActionState>();
 
     app.add_systems(
         FixedUpdate,
-        dequeue_actions.in_set(crate::game::simulation::SimulationSystems::ProcessActions),
+        (dequeue_actions, process_travel)
+            .chain()
+            .in_set(crate::game::simulation::SimulationSystems::ProcessActions),
     );
 }
