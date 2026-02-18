@@ -6,21 +6,25 @@ use crate::game::character::{
     CharacterBundle, CharacterInfo, Equipment, Health, Inventory, Skills, Squad,
 };
 use crate::game::research::ResearchState;
-use crate::game::resources::{BaseState, GameState, PlayerState, SquadState};
+use crate::game::resources::{
+    BaseState, GameState, NotificationLevel, NotificationState, PlayerState, SquadState,
+};
 use crate::screens::Screen;
 
-pub struct SaveLoadPlugin;
-
-impl Plugin for SaveLoadPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_message::<SaveGameMessage>();
-        app.add_message::<LoadGameMessage>();
-        app.add_systems(
-            Update,
-            (save_game, start_load_game, poll_load_game, autosave_system),
-        );
-        app.init_resource::<AutosaveTimer>();
-    }
+pub fn plugin(app: &mut App) {
+    app.add_message::<SaveGameMessage>();
+    app.add_message::<LoadGameMessage>();
+    app.add_systems(
+        Update,
+        (
+            save_game,
+            poll_save_game,
+            start_load_game,
+            poll_load_game,
+            autosave_system,
+        ),
+    );
+    app.init_resource::<AutosaveTimer>();
 }
 
 #[derive(Resource)]
@@ -37,6 +41,9 @@ pub struct SaveGameMessage(pub String);
 
 #[derive(Message)]
 pub struct LoadGameMessage(pub String);
+
+#[derive(Component)]
+struct SaveGameTask(Task<Result<String, String>>);
 
 #[derive(Component)]
 struct LoadGameTask(Task<Result<SaveData, String>>);
@@ -78,7 +85,8 @@ fn autosave_system(
 }
 
 fn save_game(
-    mut events: ResMut<Messages<SaveGameMessage>>, // Updated to Messages
+    mut commands: Commands,
+    mut events: ResMut<Messages<SaveGameMessage>>,
     game_state: Res<GameState>,
     player_state: Res<PlayerState>,
     squad_state: Res<SquadState>,
@@ -118,26 +126,52 @@ fn save_game(
         let filename = format!("assets/saves/{}.json", message.0);
         let thread_pool = IoTaskPool::get();
 
-        thread_pool
-            .spawn(async move {
-                #[cfg(not(target_family = "wasm"))]
-                {
-                    if let Some(parent) = std::path::Path::new(&filename).parent() {
-                        let _ = std::fs::create_dir_all(parent);
-                    }
-                    match serde_json::to_string_pretty(&save_data) {
-                        Ok(json) => {
-                            if let Err(e) = std::fs::write(&filename, json) {
-                                error!("Async Save Failed: {}", e);
-                            } else {
-                                info!("Async Save Complete: {}", filename);
-                            }
-                        }
-                        Err(e) => error!("Serialization Failed: {}", e),
-                    }
+        let task = thread_pool.spawn(async move {
+            #[cfg(not(target_family = "wasm"))]
+            {
+                if let Some(parent) = std::path::Path::new(&filename).parent() {
+                    let _ = std::fs::create_dir_all(parent);
                 }
-            })
-            .detach();
+                match serde_json::to_string_pretty(&save_data) {
+                    Ok(json) => match std::fs::write(&filename, &json) {
+                        Ok(()) => Ok(filename),
+                        Err(e) => Err(format!("Write failed: {}", e)),
+                    },
+                    Err(e) => Err(format!("Serialization failed: {}", e)),
+                }
+            }
+            #[cfg(target_family = "wasm")]
+            {
+                Err("WASM saving not implemented".to_string())
+            }
+        });
+
+        commands.spawn(SaveGameTask(task));
+    }
+}
+
+fn poll_save_game(
+    mut commands: Commands,
+    mut tasks: Query<(Entity, &mut SaveGameTask)>,
+    mut notifications: ResMut<NotificationState>,
+) {
+    for (task_entity, mut task) in &mut tasks {
+        if let Some(result) = block_on(poll_once(&mut task.0)) {
+            match result {
+                Ok(filename) => {
+                    info!("Save complete: {}", filename);
+                    notifications.push("Game saved", NotificationLevel::Success);
+                }
+                Err(e) => {
+                    error!("Save failed: {}", e);
+                    notifications.push(
+                        format!("Save failed: {}", e),
+                        NotificationLevel::Error,
+                    );
+                }
+            }
+            commands.entity(task_entity).despawn();
+        }
     }
 }
 
@@ -176,6 +210,7 @@ fn poll_load_game(
     mut squad_state: ResMut<SquadState>,
     mut base_state: ResMut<BaseState>,
     mut research_state: ResMut<ResearchState>,
+    mut notifications: ResMut<NotificationState>,
     old_characters: Query<Entity, With<CharacterInfo>>,
 ) {
     for (task_entity, mut task) in &mut tasks {
@@ -224,8 +259,15 @@ fn poll_load_game(
                     }
 
                     info!("Game loaded successfully!");
+                    notifications.push("Game loaded", NotificationLevel::Success);
                 }
-                Err(e) => error!("Failed to load game: {}", e),
+                Err(e) => {
+                    error!("Failed to load game: {}", e);
+                    notifications.push(
+                        format!("Load failed: {}", e),
+                        NotificationLevel::Error,
+                    );
+                }
             }
             commands.entity(task_entity).despawn();
         }

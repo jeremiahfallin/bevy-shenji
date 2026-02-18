@@ -8,4 +8,8 @@ pub const GRAY_800: Color = Color::srgb(0.15, 0.15, 0.15);
 pub const GRAY_700: Color = Color::srgb(0.25, 0.25, 0.25);
 pub const GRAY_100: Color = Color::srgb(0.9, 0.9, 0.9);
 
+pub const SUCCESS_600: Color = Color::srgb(0.15, 0.55, 0.25);
+pub const ERROR_600: Color = Color::srgb(0.7, 0.2, 0.2);
+pub const INFO_600: Color = Color::srgb(0.2, 0.4, 0.7);
+
 pub const TRANSPARENT: Color = Color::NONE;
