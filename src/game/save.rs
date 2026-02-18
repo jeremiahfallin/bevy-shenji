@@ -1,10 +1,15 @@
 use bevy::prelude::*;
 use bevy::tasks::{IoTaskPool, Task, block_on, poll_once};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::game::action::ActionState;
+use crate::game::building::Building;
 use crate::game::character::{
     CharacterBundle, CharacterInfo, CharacterLocation, Equipment, Health, Inventory, Skills, Squad,
+};
+use crate::game::location::{
+    LocationInfo, LocationInventory, LocationRegistry, LocationResources, LocationType,
 };
 use crate::game::research::ResearchState;
 use crate::game::resources::{
@@ -65,16 +70,47 @@ pub struct SerializedCharacter {
     pub character_location: CharacterLocation,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SerializedBuilding {
+    pub def_id: String,
+    pub name: String,
+    pub progress: u32,
+    pub required: u32,
+    pub complete: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SerializedLocation {
+    pub id: String,
+    pub name: String,
+    pub loc_type: LocationType,
+    pub distance: u32,
+    pub discovered: bool,
+    pub resource_type: String,
+    pub capacity: u32,
+    pub yield_rate: u32,
+    pub current_amount: u32,
+    pub inventory: HashMap<String, u32>,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct SaveData {
     pub game_state: GameState,
     pub player_state: PlayerState,
     pub squad_state: SquadState,
+    #[serde(default)]
     pub base_state: Option<BaseState>,
+    #[serde(default)]
     pub research_state: Option<ResearchState>,
+    #[serde(default)]
     pub simulation_state: Option<SimulationState>,
+    #[serde(default)]
     pub base_inventory: Option<BaseInventory>,
     pub characters: Vec<SerializedCharacter>,
+    #[serde(default)]
+    pub buildings: Option<Vec<SerializedBuilding>>,
+    #[serde(default)]
+    pub locations: Option<Vec<SerializedLocation>>,
 }
 
 fn autosave_system(
@@ -113,6 +149,8 @@ fn save_game(
         &ActionState,
         &CharacterLocation,
     )>,
+    building_query: Query<&Building>,
+    location_query: Query<(&LocationInfo, &LocationResources, &LocationInventory)>,
 ) {
     for message in events.drain() {
         let mut serialized_characters = Vec::new();
@@ -131,6 +169,35 @@ fn save_game(
             });
         }
 
+        // Serialize all building entities
+        let serialized_buildings: Vec<SerializedBuilding> = building_query
+            .iter()
+            .map(|b| SerializedBuilding {
+                def_id: b.def_id.clone(),
+                name: b.name.clone(),
+                progress: b.progress,
+                required: b.required,
+                complete: b.complete,
+            })
+            .collect();
+
+        // Serialize all location entities
+        let serialized_locations: Vec<SerializedLocation> = location_query
+            .iter()
+            .map(|(info, resources, inventory)| SerializedLocation {
+                id: info.id.clone(),
+                name: info.name.clone(),
+                loc_type: info.loc_type.clone(),
+                distance: info.distance,
+                discovered: info.discovered,
+                resource_type: resources.resource_type.clone(),
+                capacity: resources.capacity,
+                yield_rate: resources.yield_rate,
+                current_amount: resources.current_amount,
+                inventory: inventory.items.clone(),
+            })
+            .collect();
+
         let save_data = SaveData {
             game_state: game_state.clone(),
             player_state: player_state.clone(),
@@ -140,6 +207,8 @@ fn save_game(
             simulation_state: Some(sim_state.clone()),
             base_inventory: Some(base_inventory.clone()),
             characters: serialized_characters,
+            buildings: Some(serialized_buildings),
+            locations: Some(serialized_locations),
         };
 
         let filename = format!("assets/saves/{}.json", message.0);
@@ -232,7 +301,10 @@ fn poll_load_game(
     mut sim_state: ResMut<SimulationState>,
     mut base_inventory: ResMut<BaseInventory>,
     mut notifications: ResMut<NotificationState>,
+    mut location_registry: ResMut<LocationRegistry>,
     old_characters: Query<Entity, With<CharacterInfo>>,
+    old_buildings: Query<Entity, With<Building>>,
+    old_locations: Query<Entity, With<LocationInfo>>,
 ) {
     for (task_entity, mut task) in &mut tasks {
         if let Some(result) = block_on(poll_once(&mut task.0)) {
@@ -241,30 +313,39 @@ fn poll_load_game(
                     info!("Loading game data...");
 
                     // 1. Despawn all existing character entities to avoid orphans.
-                    //    This uses deferred commands, but we rebuild the entity map
-                    //    below so the old Entity IDs are never referenced again.
                     for entity in old_characters.iter() {
                         commands.entity(entity).despawn();
                     }
 
-                    // 2. Restore top-level resource state from save data.
+                    // 2. Despawn all existing building entities.
+                    for entity in old_buildings.iter() {
+                        commands.entity(entity).despawn();
+                    }
+
+                    // 3. Despawn all existing location entities and clear the registry.
+                    for entity in old_locations.iter() {
+                        commands.entity(entity).despawn();
+                    }
+                    location_registry.locations.clear();
+
+                    // 4. Restore top-level resource state from save data.
                     *game_state = save_data.game_state;
                     *player_state = save_data.player_state;
 
-                    // 3. Restore squad state. The saved `characters` HashMap contains
+                    // 5. Restore squad state. The saved `characters` HashMap contains
                     //    Entity IDs from the old session which are now invalid, so we
                     //    must clear it and rebuild after spawning new entities.
                     *squad_state = save_data.squad_state;
                     squad_state.characters.clear();
 
-                    // 4. Restore base, research, and simulation state, defaulting
+                    // 6. Restore base, research, and simulation state, defaulting
                     //    if absent (for backwards compatibility with older saves).
                     *base_state = save_data.base_state.unwrap_or_default();
                     *research_state = save_data.research_state.unwrap_or_default();
                     *sim_state = save_data.simulation_state.unwrap_or_default();
                     *base_inventory = save_data.base_inventory.unwrap_or_default();
 
-                    // 5. Respawn character entities from save data and rebuild the
+                    // 7. Respawn character entities from save data and rebuild the
                     //    entity map so SquadState.characters has valid Entity IDs.
                     for char_data in save_data.characters {
                         let id = char_data.info.id.clone();
@@ -281,6 +362,47 @@ fn poll_load_game(
                             })
                             .id();
                         squad_state.characters.insert(id, entity);
+                    }
+
+                    // 8. Respawn building entities from save data.
+                    if let Some(buildings) = save_data.buildings {
+                        for b in buildings {
+                            commands.spawn(Building {
+                                def_id: b.def_id,
+                                name: b.name,
+                                progress: b.progress,
+                                required: b.required,
+                                complete: b.complete,
+                            });
+                        }
+                    }
+
+                    // 9. Respawn location entities from save data and rebuild
+                    //    the LocationRegistry.
+                    if let Some(locations) = save_data.locations {
+                        for loc in locations {
+                            let entity = commands
+                                .spawn((
+                                    LocationInfo {
+                                        id: loc.id.clone(),
+                                        name: loc.name,
+                                        loc_type: loc.loc_type,
+                                        distance: loc.distance,
+                                        discovered: loc.discovered,
+                                    },
+                                    LocationResources {
+                                        resource_type: loc.resource_type,
+                                        capacity: loc.capacity,
+                                        yield_rate: loc.yield_rate,
+                                        current_amount: loc.current_amount,
+                                    },
+                                    LocationInventory {
+                                        items: loc.inventory,
+                                    },
+                                ))
+                                .id();
+                            location_registry.locations.insert(loc.id, entity);
+                        }
                     }
 
                     info!("Game loaded successfully!");
