@@ -1,3 +1,4 @@
+use crate::game::action::{Action, ActionState};
 use crate::game::character::{Equipment, Health, Inventory, Skills};
 use crate::game::resources::SquadState;
 use crate::theme::prelude::*;
@@ -45,6 +46,7 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                 &'static Skills,
                 &'static Equipment,
                 &'static Inventory,
+                &'static ActionState,
             ),
         >,
     );
@@ -54,7 +56,7 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
         params: &mut (
             Res<SquadState>,
             Res<InspectorState>,
-            Query<(&Health, &Skills, &Equipment, &Inventory)>,
+            Query<(&Health, &Skills, &Equipment, &Inventory, &ActionState)>,
         ),
     ) {
         let (squad_state, inspector_state, char_query) = (&params.0, &params.1, &params.2);
@@ -74,10 +76,13 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
             return;
         };
 
-        let Ok((health, skills, equipment, inventory)) = char_query.get(*entity) else {
+        let Ok((health, skills, equipment, inventory, action_state)) = char_query.get(*entity)
+        else {
             ui.ch().label("Character missing data");
             return;
         };
+
+        let entity_id = *entity;
 
         // 3. Render Inspector
         ui.ch()
@@ -86,6 +91,22 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
             .apply(style_panel_central)
             .p(Val::Px(15.0))
             .add(|ui| {
+                // --- Action Status Header ---
+                render_action_status(ui, entity_id, action_state);
+
+                // Divider
+                ui.ch().on_spawn_insert(|| {
+                    (
+                        Node {
+                            height: Val::Px(1.0),
+                            width: Val::Percent(100.0),
+                            margin: UiRect::axes(Val::Px(0.0), Val::Px(6.0)),
+                            ..default()
+                        },
+                        BackgroundColor(GRAY_700),
+                    )
+                });
+
                 // Tab bar
                 let active = inspector_state.active_tab;
                 ui.ch()
@@ -137,7 +158,6 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                     display_equip_slot(ui, "Main Hand", &eq.main_hand);
                 }
                 InspectorTab::Skills => {
-                    // (This part looked fine in your upload)
                     ui.ch().scrollarea(
                         |n| {
                             n.flex_direction = FlexDirection::Column;
@@ -160,7 +180,6 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                     );
                 }
                 InspectorTab::Inventory => {
-                    // (This part looked fine in your upload)
                     if inventory.items.is_empty() {
                         ui.ch()
                             .label("Empty")
@@ -177,6 +196,167 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                     }
                 }
             }});
+    }
+}
+
+/// Render the action status header showing current action, progress, queue counts.
+fn render_action_status(ui: &mut Imm<CapsUi>, entity_id: Entity, action_state: &ActionState) {
+    ui.ch().flex_col().w_full().mb(Val::Px(4.0)).add(|ui| {
+        // Current action line
+        let action_text = match &action_state.current_action {
+            Some(action) => format_action(action),
+            None => "Idle".to_string(),
+        };
+
+        ui.ch()
+            .flex_row()
+            .w_full()
+            .mb(Val::Px(2.0))
+            .add(|ui| {
+                ui.ch()
+                    .label("Action: ")
+                    .text_size(12.0)
+                    .text_color(Color::srgb(0.6, 0.6, 0.6));
+                ui.ch()
+                    .label(&action_text)
+                    .text_size(12.0)
+                    .text_color(Color::WHITE);
+            });
+
+        // Progress bar (if there's a current non-idle action with progress)
+        if action_state.current_action.is_some()
+            && !matches!(action_state.current_action, Some(Action::Idle))
+            && action_state.progress.required > 0
+        {
+            let fraction = action_state.progress.fraction();
+            let pct = (fraction * 100.0) as u32;
+
+            ui.ch()
+                .flex_row()
+                .w_full()
+                .mb(Val::Px(2.0))
+                .add(|ui| {
+                    // Progress bar background
+                    ui.ch()
+                        .style(|n: &mut Node| {
+                            n.width = Val::Percent(70.0);
+                            n.height = Val::Px(8.0);
+                        })
+                        .bg(GRAY_700)
+                        .rounded(2.0)
+                        .add(move |ui| {
+                            // Progress bar fill
+                            ui.ch()
+                                .style(move |n: &mut Node| {
+                                    n.width = Val::Percent(fraction * 100.0);
+                                    n.height = Val::Percent(100.0);
+                                })
+                                .bg(PRIMARY_500)
+                                .rounded(2.0);
+                        });
+
+                    ui.ch()
+                        .label(format!(" {}%", pct))
+                        .text_size(11.0)
+                        .text_color(Color::srgb(0.7, 0.7, 0.7));
+                });
+        }
+
+        // Queue counts
+        let queue_count = action_state.action_queue.len();
+        let job_count = action_state.job_queue.len();
+        ui.ch()
+            .flex_row()
+            .w_full()
+            .column_gap(12.0)
+            .add(|ui| {
+                ui.ch()
+                    .label(format!("Queued: {}", queue_count))
+                    .text_size(11.0)
+                    .text_color(Color::srgb(0.6, 0.6, 0.6));
+                ui.ch()
+                    .label(format!("Jobs: {}", job_count))
+                    .text_size(11.0)
+                    .text_color(Color::srgb(0.6, 0.6, 0.6));
+            });
+
+        // Action buttons row
+        ui.ch()
+            .flex_row()
+            .w_full()
+            .mt(Val::Px(4.0))
+            .column_gap(4.0)
+            .add(|ui| {
+                // Clear Actions button
+                {
+                    let entity = entity_id;
+                    ui.ch()
+                        .button()
+                        .style(|n: &mut Node| {
+                            n.padding = UiRect::axes(Val::Px(6.0), Val::Px(2.0));
+                        })
+                        .bg(GRAY_700)
+                        .on_click_once(
+                            move |_: On<Pointer<Click>>,
+                                  mut action_query: Query<&mut ActionState>| {
+                                if let Ok(mut state) = action_query.get_mut(entity) {
+                                    state.clear();
+                                }
+                            },
+                        )
+                        .add(|ui| {
+                            ui.ch()
+                                .label("Clear Actions")
+                                .text_size(11.0)
+                                .text_color(Color::srgb(0.8, 0.8, 0.8));
+                        });
+                }
+
+                // Clear Jobs button
+                {
+                    let entity = entity_id;
+                    ui.ch()
+                        .button()
+                        .style(|n: &mut Node| {
+                            n.padding = UiRect::axes(Val::Px(6.0), Val::Px(2.0));
+                        })
+                        .bg(GRAY_700)
+                        .on_click_once(
+                            move |_: On<Pointer<Click>>,
+                                  mut action_query: Query<&mut ActionState>| {
+                                if let Ok(mut state) = action_query.get_mut(entity) {
+                                    state.clear_jobs();
+                                }
+                            },
+                        )
+                        .add(|ui| {
+                            ui.ch()
+                                .label("Clear Jobs")
+                                .text_size(11.0)
+                                .text_color(Color::srgb(0.8, 0.8, 0.8));
+                        });
+                }
+            });
+    });
+}
+
+/// Format an action for display.
+fn format_action(action: &Action) -> String {
+    match action {
+        Action::Idle => "Idle".to_string(),
+        Action::Explore => "Exploring".to_string(),
+        Action::Travel { destination } => format!("Traveling to {}", destination),
+        Action::Gather { location, resource } => {
+            format!("Gathering {} at {}", resource, location)
+        }
+        Action::Collect { location, item } => format!("Collecting {} at {}", item, location),
+        Action::Deposit { item } => format!("Depositing {}", item),
+        Action::Research { tech_id } => format!("Researching {}", tech_id),
+        Action::Craft {
+            recipe_id,
+            workstation,
+        } => format!("Crafting {} at {}", recipe_id, workstation),
+        Action::Build { building } => format!("Building {}", building),
     }
 }
 
