@@ -28,4 +28,9 @@
     (id: "first_aid_kit", name: "First Aid Kit", price: 300, weight: 1, item_type: "medical", nutrition: None),
     (id: "splint_kit", name: "Splint Kit", price: 200, weight: 1, item_type: "medical", nutrition: None),
     (id: "repair_kit", name: "Repair Kit", price: 600, weight: 2, item_type: "medical", nutrition: None),
+    (id: "herbs", name: "Herbs", price: 20, weight: 1, item_type: "trade", nutrition: None),
+    (id: "scrap_wood", name: "Scrap Wood", price: 5, weight: 1, item_type: "trade", nutrition: None),
+    (id: "copper_nuggets", name: "Copper Nuggets", price: 50, weight: 1, item_type: "trade", nutrition: None),
+    (id: "rare_gem", name: "Rare Gem", price: 2000, weight: 1, item_type: "trade", nutrition: None),
+    (id: "ancient_artifact", name: "Ancient Artifact", price: 5000, weight: 2, item_type: "trade", nutrition: None),
 ]
