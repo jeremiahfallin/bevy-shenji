@@ -62,7 +62,9 @@ impl ImmediateAttach<CapsUi> for ResearchView {
                 ui.ch()
                     .flex_col()
                     .w(Val::Px(280.0))
+                    .h_full()
                     .p(Val::Px(10.0))
+                    .scroll_y()
                     .add(|ui| {
                         ui.ch()
                             .label(format!("Tech Level {}", tech_level))
