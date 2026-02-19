@@ -241,3 +241,26 @@ impl BaseInventory {
         *self.items.get(item).unwrap_or(&0)
     }
 }
+
+#[derive(Resource, Clone, Debug, Default, Serialize, Deserialize, Reflect)]
+#[reflect(Resource)]
+pub struct ExplorationState {
+    pub total_explorations: u32,
+    pub generated_nodes: StdHashMap<String, u32>,
+}
+
+impl ExplorationState {
+    pub const MAX_GENERATED_PER_TYPE: u32 = 3;
+
+    pub fn can_generate(&self, resource_type: &str) -> bool {
+        self.generated_count(resource_type) < Self::MAX_GENERATED_PER_TYPE
+    }
+
+    pub fn record_generation(&mut self, resource_type: &str) {
+        *self.generated_nodes.entry(resource_type.to_string()).or_insert(0) += 1;
+    }
+
+    pub fn generated_count(&self, resource_type: &str) -> u32 {
+        *self.generated_nodes.get(resource_type).unwrap_or(&0)
+    }
+}
