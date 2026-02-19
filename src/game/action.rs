@@ -581,7 +581,10 @@ fn process_explore(
         let mut weights: Vec<(ExplorationOutcome, u32)> = Vec::new();
 
         if undiscovered_count > 0 {
-            weights.push((ExplorationOutcome::DiscoverLandmark, undiscovered_count * 15));
+            weights.push((
+                ExplorationOutcome::DiscoverLandmark,
+                undiscovered_count * 15,
+            ));
         }
         if can_generate_any {
             weights.push((
@@ -616,10 +619,8 @@ fn process_explore(
                     if let Ok((_, mut loc)) = locations.get_mut(entity) {
                         loc.discovered = true;
                     }
-                    notifications.push(
-                        format!("Discovered: {}!", name),
-                        NotificationLevel::Success,
-                    );
+                    notifications
+                        .push(format!("Discovered: {}!", name), NotificationLevel::Success);
                 }
             }
 

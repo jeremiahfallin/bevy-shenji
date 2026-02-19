@@ -257,7 +257,10 @@ impl ExplorationState {
     }
 
     pub fn record_generation(&mut self, resource_type: &str) {
-        *self.generated_nodes.entry(resource_type.to_string()).or_insert(0) += 1;
+        *self
+            .generated_nodes
+            .entry(resource_type.to_string())
+            .or_insert(0) += 1;
     }
 
     pub fn generated_count(&self, resource_type: &str) -> u32 {

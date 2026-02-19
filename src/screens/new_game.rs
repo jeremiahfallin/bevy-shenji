@@ -13,7 +13,9 @@ use crate::{
         data::GameData,
         location::{LocationInfo, LocationRegistry},
         research::ResearchState,
-        resources::{BaseInventory, BaseState, ExplorationState, GameState, PlayerState, SquadState},
+        resources::{
+            BaseInventory, BaseState, ExplorationState, GameState, PlayerState, SquadState,
+        },
         scenarios::{apply_scenario, get_all_scenarios},
         simulation::SimulationState,
     },

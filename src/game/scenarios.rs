@@ -2,7 +2,9 @@ use super::character::Squad;
 use super::data::GameData;
 use super::location::{LocationInfo, LocationInventory, LocationRegistry, LocationResources};
 use super::research::ResearchState;
-use super::resources::{BaseInventory, BaseState, ExplorationState, GameState, PlayerState, SquadState};
+use super::resources::{
+    BaseInventory, BaseState, ExplorationState, GameState, PlayerState, SquadState,
+};
 use super::simulation::SimulationState;
 use bevy::prelude::*;
 
