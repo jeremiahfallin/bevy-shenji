@@ -155,85 +155,88 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
 
                 // Tab content
                 match inspector_state.active_tab {
-                InspectorTab::Health => {
-                    for (part, hp) in health.iter() {
-                        ui.ch()
-                            .flex_row()
-                            .justify_between()
-                            .w_full()
-                            .mb(Val::Px(5.0))
-                            .add(|ui| {
-                                ui.ch().label(part).text_color(Color::srgb(0.8, 0.8, 0.8));
-                                let color = if hp > 80 {
-                                    Color::srgb(0.0, 1.0, 0.0)
-                                } else if hp > 40 {
-                                    Color::srgb(1.0, 1.0, 0.0)
-                                } else {
-                                    Color::srgb(1.0, 0.0, 0.0)
-                                };
-                                ui.ch().label(format!("{}", hp)).text_color(color);
-                            });
-                    }
-                    ui.ch().label("Status").mt(Val::Px(10.0)).mb(Val::Px(5.0));
-                    ui.ch().label(format!("Hunger: {}", health.hunger));
-                }
-                InspectorTab::Equipment => {
-                    let eq = equipment;
-                    display_equip_slot(ui, "Head", &eq.head);
-                    display_equip_slot(ui, "Chest", &eq.chest);
-                    display_equip_slot(ui, "Legs", &eq.legs);
-                    display_equip_slot(ui, "Feet", &eq.feet);
-                    display_equip_slot(ui, "Hands", &eq.hands);
-                    display_equip_slot(ui, "Main Hand", &eq.main_hand);
-                }
-                InspectorTab::Skills => {
-                    ui.ch().scrollarea(
-                        |n| {
-                            n.flex_direction = FlexDirection::Column;
-                        },
-                        |ui| {
-                            for (skill, xp) in skills.iter() {
-                                ui.ch()
-                                    .flex_row()
-                                    .justify_between()
-                                    .w_full()
-                                    .mb(Val::Px(2.0))
-                                    .add(|ui| {
-                                        ui.ch().label(skill).text_color(Color::srgb(0.8, 0.8, 0.8));
-                                        ui.ch()
-                                            .label(format!("{}", xp_to_level(xp)))
-                                            .text_color(Color::WHITE);
-                                    });
-                            }
-                        },
-                    );
-                }
-                InspectorTab::Inventory => {
-                    if inventory.items.is_empty() {
-                        ui.ch()
-                            .label("Empty")
-                            .text_color(Color::srgb(0.5, 0.5, 0.5));
-                    } else {
-                        for (item, count) in &inventory.items {
-                            ui.ch().flex_row().justify_between().w_full().add(|ui| {
-                                ui.ch().label(format!("{}: {}", item, count));
-                                ui.ch().button().add(|ui| {
-                                    ui.ch().label("Drop");
+                    InspectorTab::Health => {
+                        for (part, hp) in health.iter() {
+                            ui.ch()
+                                .flex_row()
+                                .justify_between()
+                                .w_full()
+                                .mb(Val::Px(5.0))
+                                .add(|ui| {
+                                    ui.ch().label(part).text_color(Color::srgb(0.8, 0.8, 0.8));
+                                    let color = if hp > 80 {
+                                        Color::srgb(0.0, 1.0, 0.0)
+                                    } else if hp > 40 {
+                                        Color::srgb(1.0, 1.0, 0.0)
+                                    } else {
+                                        Color::srgb(1.0, 0.0, 0.0)
+                                    };
+                                    ui.ch().label(format!("{}", hp)).text_color(color);
                                 });
-                            });
+                        }
+                        ui.ch().label("Status").mt(Val::Px(10.0)).mb(Val::Px(5.0));
+                        ui.ch().label(format!("Hunger: {}", health.hunger));
+                    }
+                    InspectorTab::Equipment => {
+                        let eq = equipment;
+                        display_equip_slot(ui, "Head", &eq.head);
+                        display_equip_slot(ui, "Chest", &eq.chest);
+                        display_equip_slot(ui, "Legs", &eq.legs);
+                        display_equip_slot(ui, "Feet", &eq.feet);
+                        display_equip_slot(ui, "Hands", &eq.hands);
+                        display_equip_slot(ui, "Main Hand", &eq.main_hand);
+                    }
+                    InspectorTab::Skills => {
+                        ui.ch().scrollarea(
+                            |n| {
+                                n.flex_direction = FlexDirection::Column;
+                            },
+                            |ui| {
+                                for (skill, xp) in skills.iter() {
+                                    ui.ch()
+                                        .flex_row()
+                                        .justify_between()
+                                        .w_full()
+                                        .mb(Val::Px(2.0))
+                                        .add(|ui| {
+                                            ui.ch()
+                                                .label(skill)
+                                                .text_color(Color::srgb(0.8, 0.8, 0.8));
+                                            ui.ch()
+                                                .label(format!("{}", xp_to_level(xp)))
+                                                .text_color(Color::WHITE);
+                                        });
+                                }
+                            },
+                        );
+                    }
+                    InspectorTab::Inventory => {
+                        if inventory.items.is_empty() {
+                            ui.ch()
+                                .label("Empty")
+                                .text_color(Color::srgb(0.5, 0.5, 0.5));
+                        } else {
+                            for (item, count) in &inventory.items {
+                                ui.ch().flex_row().justify_between().w_full().add(|ui| {
+                                    ui.ch().label(format!("{}: {}", item, count));
+                                    ui.ch().button().add(|ui| {
+                                        ui.ch().label("Drop");
+                                    });
+                                });
+                            }
                         }
                     }
+                    InspectorTab::Jobs => {
+                        render_jobs_tab(
+                            ui,
+                            entity_id,
+                            action_state,
+                            &gather_locations,
+                            inspector_state.job_picker_mode,
+                        );
+                    }
                 }
-                InspectorTab::Jobs => {
-                    render_jobs_tab(
-                        ui,
-                        entity_id,
-                        action_state,
-                        &gather_locations,
-                        inspector_state.job_picker_mode,
-                    );
-                }
-            }});
+            });
     }
 }
 
@@ -246,20 +249,16 @@ fn render_action_status(ui: &mut Imm<CapsUi>, entity_id: Entity, action_state: &
             None => "Idle".to_string(),
         };
 
-        ui.ch()
-            .flex_row()
-            .w_full()
-            .mb(Val::Px(2.0))
-            .add(|ui| {
-                ui.ch()
-                    .label("Action: ")
-                    .text_size(12.0)
-                    .text_color(Color::srgb(0.6, 0.6, 0.6));
-                ui.ch()
-                    .label(&action_text)
-                    .text_size(12.0)
-                    .text_color(Color::WHITE);
-            });
+        ui.ch().flex_row().w_full().mb(Val::Px(2.0)).add(|ui| {
+            ui.ch()
+                .label("Action: ")
+                .text_size(12.0)
+                .text_color(Color::srgb(0.6, 0.6, 0.6));
+            ui.ch()
+                .label(&action_text)
+                .text_size(12.0)
+                .text_color(Color::WHITE);
+        });
 
         // Progress bar (if there's a current non-idle action with progress)
         if action_state.current_action.is_some()
@@ -269,54 +268,46 @@ fn render_action_status(ui: &mut Imm<CapsUi>, entity_id: Entity, action_state: &
             let fraction = action_state.progress.fraction();
             let pct = (fraction * 100.0) as u32;
 
-            ui.ch()
-                .flex_row()
-                .w_full()
-                .mb(Val::Px(2.0))
-                .add(|ui| {
-                    // Progress bar background
-                    ui.ch()
-                        .style(|n: &mut Node| {
-                            n.width = Val::Percent(70.0);
-                            n.height = Val::Px(8.0);
-                        })
-                        .bg(GRAY_700)
-                        .rounded(2.0)
-                        .add(move |ui| {
-                            // Progress bar fill
-                            ui.ch()
-                                .style(move |n: &mut Node| {
-                                    n.width = Val::Percent(fraction * 100.0);
-                                    n.height = Val::Percent(100.0);
-                                })
-                                .bg(PRIMARY_500)
-                                .rounded(2.0);
-                        });
+            ui.ch().flex_row().w_full().mb(Val::Px(2.0)).add(|ui| {
+                // Progress bar background
+                ui.ch()
+                    .style(|n: &mut Node| {
+                        n.width = Val::Percent(70.0);
+                        n.height = Val::Px(8.0);
+                    })
+                    .bg(GRAY_700)
+                    .rounded(2.0)
+                    .add(move |ui| {
+                        // Progress bar fill
+                        ui.ch()
+                            .style(move |n: &mut Node| {
+                                n.width = Val::Percent(fraction * 100.0);
+                                n.height = Val::Percent(100.0);
+                            })
+                            .bg(PRIMARY_500)
+                            .rounded(2.0);
+                    });
 
-                    ui.ch()
-                        .label(format!(" {}%", pct))
-                        .text_size(11.0)
-                        .text_color(Color::srgb(0.7, 0.7, 0.7));
-                });
+                ui.ch()
+                    .label(format!(" {}%", pct))
+                    .text_size(11.0)
+                    .text_color(Color::srgb(0.7, 0.7, 0.7));
+            });
         }
 
         // Queue counts
         let queue_count = action_state.action_queue.len();
         let job_count = action_state.job_queue.len();
-        ui.ch()
-            .flex_row()
-            .w_full()
-            .column_gap(12.0)
-            .add(|ui| {
-                ui.ch()
-                    .label(format!("Queued: {}", queue_count))
-                    .text_size(11.0)
-                    .text_color(Color::srgb(0.6, 0.6, 0.6));
-                ui.ch()
-                    .label(format!("Jobs: {}", job_count))
-                    .text_size(11.0)
-                    .text_color(Color::srgb(0.6, 0.6, 0.6));
-            });
+        ui.ch().flex_row().w_full().column_gap(12.0).add(|ui| {
+            ui.ch()
+                .label(format!("Queued: {}", queue_count))
+                .text_size(11.0)
+                .text_color(Color::srgb(0.6, 0.6, 0.6));
+            ui.ch()
+                .label(format!("Jobs: {}", job_count))
+                .text_size(11.0)
+                .text_color(Color::srgb(0.6, 0.6, 0.6));
+        });
 
         // Action buttons row
         ui.ch()
@@ -456,8 +447,7 @@ fn render_jobs_tab(
                         })
                         .bg(GRAY_700)
                         .on_click_once(
-                            move |_: On<Pointer<Click>>,
-                                  mut inspector: ResMut<InspectorState>| {
+                            move |_: On<Pointer<Click>>, mut inspector: ResMut<InspectorState>| {
                                 inspector.job_picker_mode = JobPickerMode::GatherPicker;
                             },
                         )
@@ -492,8 +482,7 @@ fn render_jobs_tab(
                     .bg(GRAY_700)
                     .mb(Val::Px(2.0))
                     .on_click_once(
-                        move |_: On<Pointer<Click>>,
-                              mut inspector: ResMut<InspectorState>| {
+                        move |_: On<Pointer<Click>>, mut inspector: ResMut<InspectorState>| {
                             inspector.job_picker_mode = JobPickerMode::None;
                         },
                     )

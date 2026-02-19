@@ -105,15 +105,9 @@ impl ImmediateAttach<CapsUi> for ContextMenuOverlay {
             Res<LocationRegistry>,
         ),
     ) {
-        let (menu_state, characters, locations, game_data, research_state, _location_registry) =
-            (
-                &*params.0,
-                &params.1,
-                &params.2,
-                &params.3,
-                &params.4,
-                &params.5,
-            );
+        let (menu_state, characters, locations, game_data, research_state, _location_registry) = (
+            &*params.0, &params.1, &params.2, &params.3, &params.4, &params.5,
+        );
 
         if !menu_state.is_open {
             return;
@@ -339,10 +333,7 @@ fn render_character_menu(
                         },
                     )
                     .add(|ui| {
-                        ui.ch()
-                            .label(&label)
-                            .text_size(13.0)
-                            .text_color(GRAY_100);
+                        ui.ch().label(&label).text_size(13.0).text_color(GRAY_100);
                     });
             }
         }
@@ -378,10 +369,7 @@ fn render_character_menu(
                         },
                     )
                     .add(|ui| {
-                        ui.ch()
-                            .label(&label)
-                            .text_size(13.0)
-                            .text_color(GRAY_100);
+                        ui.ch().label(&label).text_size(13.0).text_color(GRAY_100);
                     });
             }
         }
@@ -415,10 +403,7 @@ fn render_character_menu(
                         },
                     )
                     .add(|ui| {
-                        ui.ch()
-                            .label(&label)
-                            .text_size(13.0)
-                            .text_color(GRAY_100);
+                        ui.ch().label(&label).text_size(13.0).text_color(GRAY_100);
                     });
             }
         }
@@ -483,9 +468,11 @@ fn menu_item_close(ui: &mut Imm<CapsUi>, label: &str) {
         .style(|n: &mut Node| {
             n.padding = UiRect::axes(Val::Px(8.0), Val::Px(4.0));
         })
-        .on_click_once(|_: On<Pointer<Click>>, mut state: ResMut<ContextMenuState>| {
-            state.is_open = false;
-        })
+        .on_click_once(
+            |_: On<Pointer<Click>>, mut state: ResMut<ContextMenuState>| {
+                state.is_open = false;
+            },
+        )
         .add(|ui| {
             ui.ch()
                 .label(&label_owned)

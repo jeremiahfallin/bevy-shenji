@@ -116,21 +116,12 @@ impl ImmediateAttach<CapsUi> for Sidebar {
                     .add(|ui| {
                         ui.ch().header("Resources");
 
-                        let resource_row =
-                            |ui: &mut Imm<CapsUi>, label: &str, count: u32| {
-                                ui.ch()
-                                    .flex_row()
-                                    .justify_between()
-                                    .w_full()
-                                    .add(|ui| {
-                                        ui.ch()
-                                            .label(label)
-                                            .text_color(Color::srgb(0.8, 0.8, 0.8));
-                                        ui.ch()
-                                            .label(format!("{}", count))
-                                            .text_color(Color::WHITE);
-                                    });
-                            };
+                        let resource_row = |ui: &mut Imm<CapsUi>, label: &str, count: u32| {
+                            ui.ch().flex_row().justify_between().w_full().add(|ui| {
+                                ui.ch().label(label).text_color(Color::srgb(0.8, 0.8, 0.8));
+                                ui.ch().label(format!("{}", count)).text_color(Color::WHITE);
+                            });
+                        };
 
                         resource_row(ui, "Lumber", base_inv.count("lumber"));
                         resource_row(ui, "Stone", base_inv.count("stone"));

@@ -3,9 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::game::action::ActionState;
 
-#[derive(
-    Component, Debug, Clone, Copy, PartialEq, Eq, Reflect, Serialize, Deserialize,
-)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Reflect, Serialize, Deserialize)]
 #[reflect(Component)]
 pub struct Health {
     pub head: u8,
@@ -90,7 +88,6 @@ pub struct CharacterInfo {
     pub name: String,
     pub race: String,
     pub subrace: String,
-    pub location: String,
 }
 
 #[derive(Component, Clone, Debug, Default, Serialize, Deserialize, Reflect)]
@@ -179,15 +176,19 @@ impl Skills {
 }
 
 impl CharacterBundle {
-    pub fn new(id: String, name: String, race: String, subrace: String, location: String) -> Self {
-        let location_id = location.clone();
+    pub fn new(
+        id: String,
+        name: String,
+        race: String,
+        subrace: String,
+        location_id: String,
+    ) -> Self {
         Self {
             info: CharacterInfo {
                 id,
                 name,
                 race,
                 subrace,
-                location,
             },
             health: Health::default(),
             skills: Skills::default(),
@@ -197,9 +198,7 @@ impl CharacterBundle {
             },
             squad: Squad(0),
             action_state: ActionState::default(),
-            character_location: CharacterLocation {
-                location_id,
-            },
+            character_location: CharacterLocation { location_id },
         }
     }
 }

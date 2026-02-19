@@ -1,4 +1,6 @@
-use super::{bottom_bar::BottomBar, content::Content, context_menu::ContextMenuOverlay, sidebar::Sidebar};
+use super::{
+    bottom_bar::BottomBar, content::Content, context_menu::ContextMenuOverlay, sidebar::Sidebar,
+};
 use crate::screens::Screen;
 use crate::theme::UiRoot;
 use crate::theme::prelude::*;

@@ -9,11 +9,7 @@ pub struct LocationsView;
 
 impl ImmediateAttach<CapsUi> for LocationsView {
     type Params = (
-        Query<
-            'static,
-            'static,
-            (&'static LocationInfo, &'static LocationResources),
-        >,
+        Query<'static, 'static, (&'static LocationInfo, &'static LocationResources)>,
         Query<'static, 'static, (&'static CharacterInfo, &'static CharacterLocation)>,
     );
 
@@ -88,26 +84,19 @@ impl ImmediateAttach<CapsUi> for LocationsView {
 
                             // Resources (if applicable)
                             if !resources.resource_type.is_empty() && resources.capacity > 0 {
-                                ui.ch()
-                                    .flex_row()
-                                    .w_full()
-                                    .mb(Val::Px(2.0))
-                                    .add(|ui| {
-                                        ui.ch()
-                                            .label(format!(
-                                                "{}: {}/{}",
-                                                resources.resource_type,
-                                                resources.current_amount,
-                                                resources.capacity
-                                            ))
-                                            .text_color(Color::srgb(0.8, 0.8, 0.5));
-                                        ui.ch()
-                                            .label(format!(
-                                                " (yield: {}/tick)",
-                                                resources.yield_rate
-                                            ))
-                                            .text_color(Color::srgb(0.5, 0.7, 0.5));
-                                    });
+                                ui.ch().flex_row().w_full().mb(Val::Px(2.0)).add(|ui| {
+                                    ui.ch()
+                                        .label(format!(
+                                            "{}: {}/{}",
+                                            resources.resource_type,
+                                            resources.current_amount,
+                                            resources.capacity
+                                        ))
+                                        .text_color(Color::srgb(0.8, 0.8, 0.5));
+                                    ui.ch()
+                                        .label(format!(" (yield: {}/tick)", resources.yield_rate))
+                                        .text_color(Color::srgb(0.5, 0.7, 0.5));
+                                });
                             }
 
                             // Characters at this location

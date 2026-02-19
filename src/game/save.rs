@@ -252,10 +252,7 @@ fn poll_save_game(
                 }
                 Err(e) => {
                     error!("Save failed: {}", e);
-                    notifications.push(
-                        format!("Save failed: {}", e),
-                        NotificationLevel::Error,
-                    );
+                    notifications.push(format!("Save failed: {}", e), NotificationLevel::Error);
                 }
             }
             commands.entity(task_entity).despawn();
@@ -410,10 +407,7 @@ fn poll_load_game(
                 }
                 Err(e) => {
                     error!("Failed to load game: {}", e);
-                    notifications.push(
-                        format!("Load failed: {}", e),
-                        NotificationLevel::Error,
-                    );
+                    notifications.push(format!("Load failed: {}", e), NotificationLevel::Error);
                 }
             }
             commands.entity(task_entity).despawn();

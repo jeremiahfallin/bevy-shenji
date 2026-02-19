@@ -163,14 +163,24 @@ fn dequeue_actions(mut characters: Query<&mut ActionState>) {
     }
 }
 
-fn process_travel(mut characters: Query<(&mut ActionState, &mut CharacterLocation)>) {
+fn process_travel(
+    mut characters: Query<(&mut ActionState, &mut CharacterLocation)>,
+    location_registry: Res<LocationRegistry>,
+    locations: Query<&LocationInfo>,
+) {
     for (mut state, mut location) in &mut characters {
         let destination = match &state.current_action {
             Some(Action::Travel { destination }) => destination.clone(),
             _ => continue,
         };
         if state.progress.required == 0 {
-            state.progress = ActionProgress::new(30); // default 30 ticks
+            let travel_time = location_registry
+                .locations
+                .get(&destination)
+                .and_then(|&e| locations.get(e).ok())
+                .map(|info| info.distance)
+                .unwrap_or(30);
+            state.progress = ActionProgress::new(travel_time);
         }
         if state.progress.tick() {
             location.location_id = destination;
@@ -231,10 +241,7 @@ fn process_gather(
             loc_resources.current_amount -= yield_amount;
 
             // Add to location inventory
-            *loc_inventory
-                .items
-                .entry(resource.clone())
-                .or_insert(0) += yield_amount;
+            *loc_inventory.items.entry(resource.clone()).or_insert(0) += yield_amount;
 
             // Clear action
             state.current_action = None;
@@ -452,34 +459,20 @@ fn process_build(
 
         // Find an incomplete Building entity with matching def_id
         let mut found = false;
+        let mut completed = false;
         for mut building in &mut buildings {
             if building.def_id == building_id && !building.complete {
-                // Contribute 1 progress per tick
                 building.progress += 1;
                 if building.progress >= building.required {
                     building.complete = true;
+                    completed = true;
                 }
                 found = true;
                 break;
             }
         }
 
-        if !found {
-            // No matching incomplete building found; cancel action
-            state.current_action = None;
-            continue;
-        }
-
-        // Check if the building we just worked on is now complete
-        let mut done = false;
-        for building in &buildings {
-            if building.def_id == building_id && building.complete {
-                done = true;
-                break;
-            }
-        }
-
-        if done {
+        if !found || completed {
             state.current_action = None;
         }
     }
@@ -513,10 +506,7 @@ fn process_explore(
             }
 
             if let Some(name) = discovered_name {
-                notifications.push(
-                    format!("Discovered: {}", name),
-                    NotificationLevel::Success,
-                );
+                notifications.push(format!("Discovered: {}", name), NotificationLevel::Success);
             } else {
                 notifications.push(
                     "Exploration complete - no new locations found",
@@ -547,7 +537,7 @@ fn apply_skill_xp(
             _ => continue,
         };
         let multiplier = game_data.get_xp_multiplier(&info.race, &info.subrace, skill_name);
-        let xp_gain = (1.0 * multiplier) as u32;
+        let xp_gain = (1.0_f32 * multiplier).max(0.5).ceil() as u32;
         // Apply to matching skill field
         match skill_name {
             "labouring" => skills.labouring = skills.labouring.saturating_add(xp_gain),
@@ -560,7 +550,9 @@ fn apply_skill_xp(
         // Explore also gives athletics XP
         if matches!(action, Action::Explore) {
             let ath_mult = game_data.get_xp_multiplier(&info.race, &info.subrace, "athletics");
-            skills.athletics = skills.athletics.saturating_add((1.0 * ath_mult) as u32);
+            skills.athletics = skills
+                .athletics
+                .saturating_add((1.0_f32 * ath_mult).max(0.5).ceil() as u32);
         }
     }
 }

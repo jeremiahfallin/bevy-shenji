@@ -140,7 +140,7 @@ pub fn apply_scenario(
             template.name.clone(),
             template.race.clone(),
             template.subrace.clone(),
-            "Home Base".to_string(),
+            "base".to_string(),
         );
 
         // Spawn the entity

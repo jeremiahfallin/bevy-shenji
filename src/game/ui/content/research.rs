@@ -78,13 +78,13 @@ impl ImmediateAttach<CapsUi> for ResearchView {
 
                         for research in research_in_level {
                             let is_unlocked = research_state.is_unlocked(&research.id);
-                            let can_research =
-                                research_state.can_research(&research.id, game_data);
+                            let can_research = research_state.can_research(&research.id, game_data);
 
                             // Check if the player can afford the cost
-                            let can_afford = research.cost.iter().all(|(item_id, &amount)| {
-                                base_inventory.count(item_id) >= amount
-                            });
+                            let can_afford = research
+                                .cost
+                                .iter()
+                                .all(|(item_id, &amount)| base_inventory.count(item_id) >= amount);
 
                             let is_current = research_state.current_research.as_deref()
                                 == Some(research.id.as_str());
@@ -172,36 +172,17 @@ impl ImmediateAttach<CapsUi> for ResearchView {
                                                 .text_size(10.0)
                                                 .text_color(Color::srgb(0.4, 0.4, 0.9));
                                         } else if can_research {
-                                            let research_id = research.id.clone();
-                                            let cost_clone = research.cost.clone();
-
-                                            ui.ch()
-                                                .button()
-                                                .mt(Val::Px(5.0))
-                                                .disabled(!can_afford)
-                                                .on_click_once(
-                                                    move |_: On<Pointer<Click>>,
-                                                          mut r_state: ResMut<ResearchState>,
-                                                          mut b_inv: ResMut<BaseInventory>| {
-                                                        // Deduct costs from base inventory
-                                                        let affordable = cost_clone
-                                                            .iter()
-                                                            .all(|(item_id, &amount)| {
-                                                                b_inv.count(item_id) >= amount
-                                                            });
-                                                        if affordable {
-                                                            for (item_id, &amount) in &cost_clone {
-                                                                b_inv.remove(item_id, amount);
-                                                            }
-                                                            r_state.current_research =
-                                                                Some(research_id.clone());
-                                                            r_state.research_progress = 0;
-                                                        }
-                                                    },
-                                                )
-                                                .add(|ui| {
-                                                    ui.ch().label("Research");
-                                                });
+                                            if can_afford {
+                                                ui.ch()
+                                                    .label("Available")
+                                                    .text_size(10.0)
+                                                    .text_color(Color::srgb(0.2, 0.8, 0.2));
+                                            } else {
+                                                ui.ch()
+                                                    .label("Need Resources")
+                                                    .text_size(10.0)
+                                                    .text_color(Color::srgb(0.8, 0.6, 0.2));
+                                            }
                                         } else {
                                             ui.ch()
                                                 .label("Locked")

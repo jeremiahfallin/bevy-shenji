@@ -79,9 +79,10 @@ fn spawn_pause_overlay(mut commands: Commands, ui_root: Res<UiRoot>) {
 
 fn unpause(mut next_pause: ResMut<NextState<Pause>>, mut sim: ResMut<SimulationState>) {
     next_pause.set(Pause(false));
-    // Restore simulation to running (speed 1) when leaving pause menu.
+    // Restore simulation to the speed it was running at before pause.
     if sim.is_paused() {
-        sim.set_speed(1);
+        let prev = sim.previous_speed.max(1);
+        sim.set_speed(prev);
     }
 }
 

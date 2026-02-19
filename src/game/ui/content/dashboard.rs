@@ -35,10 +35,7 @@ impl ImmediateAttach<CapsUi> for DashboardView {
             .add(|ui| {
                 // --- Resources Section ---
                 ui.ch().flex_col().w_full().add(|ui| {
-                    ui.ch()
-                        .label("Resources")
-                        .font_bold()
-                        .mb(Val::Px(5.0));
+                    ui.ch().label("Resources").font_bold().mb(Val::Px(5.0));
 
                     if base_inv.items.is_empty() {
                         ui.ch()
@@ -55,12 +52,8 @@ impl ImmediateAttach<CapsUi> for DashboardView {
                                 .w_full()
                                 .mb(Val::Px(2.0))
                                 .add(|ui| {
-                                    ui.ch()
-                                        .label(name)
-                                        .text_color(Color::srgb(0.8, 0.8, 0.8));
-                                    ui.ch()
-                                        .label(format!("{}", count))
-                                        .text_color(Color::WHITE);
+                                    ui.ch().label(name).text_color(Color::srgb(0.8, 0.8, 0.8));
+                                    ui.ch().label(format!("{}", count)).text_color(Color::WHITE);
                                 });
                         }
                     }
@@ -68,10 +61,7 @@ impl ImmediateAttach<CapsUi> for DashboardView {
 
                 // --- Workers Section ---
                 ui.ch().flex_col().w_full().add(|ui| {
-                    ui.ch()
-                        .label("Workers")
-                        .font_bold()
-                        .mb(Val::Px(5.0));
+                    ui.ch().label("Workers").font_bold().mb(Val::Px(5.0));
 
                     let mut active = 0u32;
                     let mut idle = 0u32;
@@ -83,39 +73,24 @@ impl ImmediateAttach<CapsUi> for DashboardView {
                         }
                     }
 
-                    ui.ch().label(format!(
-                        "Workers: {} active, {} idle",
-                        active, idle
-                    ));
+                    ui.ch()
+                        .label(format!("Workers: {} active, {} idle", active, idle));
                 });
 
                 // --- Research Section ---
                 ui.ch().flex_col().w_full().add(|ui| {
-                    ui.ch()
-                        .label("Research")
-                        .font_bold()
-                        .mb(Val::Px(5.0));
+                    ui.ch().label("Research").font_bold().mb(Val::Px(5.0));
 
                     let unlocked_count = research_state.unlocked.len();
-                    ui.ch().label(format!(
-                        "Technologies unlocked: {}",
-                        unlocked_count
-                    ));
+                    ui.ch()
+                        .label(format!("Technologies unlocked: {}", unlocked_count));
                 });
 
                 // --- Notifications Section ---
                 ui.ch().flex_col().w_full().add(|ui| {
-                    ui.ch()
-                        .label("Notifications")
-                        .font_bold()
-                        .mb(Val::Px(5.0));
+                    ui.ch().label("Notifications").font_bold().mb(Val::Px(5.0));
 
-                    let notifs: Vec<_> = notif_state
-                        .notifications
-                        .iter()
-                        .rev()
-                        .take(5)
-                        .collect();
+                    let notifs: Vec<_> = notif_state.notifications.iter().rev().take(5).collect();
 
                     if notifs.is_empty() {
                         ui.ch()

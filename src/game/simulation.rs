@@ -21,6 +21,13 @@ pub struct SimulationState {
     pub ticks_per_day: u32,
     /// Current simulation speed multiplier (0 = paused).
     pub speed: u32,
+    /// Speed before pausing, restored on unpause.
+    #[serde(default = "default_previous_speed")]
+    pub previous_speed: u32,
+}
+
+fn default_previous_speed() -> u32 {
+    1
 }
 
 impl Default for SimulationState {
@@ -30,6 +37,7 @@ impl Default for SimulationState {
             game_days: 0,
             ticks_per_day: 600,
             speed: 1,
+            previous_speed: 1,
         }
     }
 }
@@ -44,10 +52,13 @@ impl SimulationState {
     }
 
     pub fn set_speed(&mut self, speed: u32) {
-        self.speed = speed;
+        self.speed = speed.min(5);
     }
 
     pub fn pause(&mut self) {
+        if !self.is_paused() {
+            self.previous_speed = self.speed;
+        }
         self.speed = 0;
     }
 
@@ -189,7 +200,6 @@ pub fn plugin(app: &mut App) {
     // so they are responsive even while paused, and only during gameplay.
     app.add_systems(
         Update,
-        (speed_controls, adjust_tick_rate)
-            .run_if(in_state(Screen::Gameplay)),
+        (speed_controls, adjust_tick_rate).run_if(in_state(Screen::Gameplay)),
     );
 }
