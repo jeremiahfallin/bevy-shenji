@@ -1,6 +1,6 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
+use std::collections::{HashMap as StdHashMap, VecDeque};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Reflect, Serialize, Deserialize)]
 pub enum GameView {
@@ -9,6 +9,7 @@ pub enum GameView {
     Research,
     Squads,
     Characters,
+    Locations,
 }
 
 #[derive(Resource, Default, Debug, Reflect)]
@@ -21,17 +22,11 @@ pub struct UiState {
 #[reflect(Resource)]
 pub struct GameState {
     pub current_level: u32,
-    pub game_time: f32,
-    pub is_paused: bool,
-    pub game_days: u32,
 }
 
 impl GameState {
     pub fn reset(&mut self) {
         self.current_level = 0;
-        self.game_time = 0.0;
-        self.is_paused = false;
-        self.game_days = 0;
     }
 }
 
@@ -215,5 +210,60 @@ impl NotificationState {
             n.ttl -= dt;
         }
         self.notifications.retain(|n| n.ttl > 0.0);
+    }
+}
+
+#[derive(Resource, Clone, Debug, Default, Serialize, Deserialize, Reflect)]
+#[reflect(Resource)]
+pub struct BaseInventory {
+    pub items: StdHashMap<String, u32>,
+}
+
+impl BaseInventory {
+    pub fn add(&mut self, item: &str, amount: u32) {
+        *self.items.entry(item.to_string()).or_insert(0) += amount;
+    }
+
+    pub fn remove(&mut self, item: &str, amount: u32) -> bool {
+        if let Some(current) = self.items.get_mut(item) {
+            if *current >= amount {
+                *current -= amount;
+                if *current == 0 {
+                    self.items.remove(item);
+                }
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn count(&self, item: &str) -> u32 {
+        *self.items.get(item).unwrap_or(&0)
+    }
+}
+
+#[derive(Resource, Clone, Debug, Default, Serialize, Deserialize, Reflect)]
+#[reflect(Resource)]
+pub struct ExplorationState {
+    pub total_explorations: u32,
+    pub generated_nodes: StdHashMap<String, u32>,
+}
+
+impl ExplorationState {
+    pub const MAX_GENERATED_PER_TYPE: u32 = 3;
+
+    pub fn can_generate(&self, resource_type: &str) -> bool {
+        self.generated_count(resource_type) < Self::MAX_GENERATED_PER_TYPE
+    }
+
+    pub fn record_generation(&mut self, resource_type: &str) {
+        *self
+            .generated_nodes
+            .entry(resource_type.to_string())
+            .or_insert(0) += 1;
+    }
+
+    pub fn generated_count(&self, resource_type: &str) -> u32 {
+        *self.generated_nodes.get(resource_type).unwrap_or(&0)
     }
 }

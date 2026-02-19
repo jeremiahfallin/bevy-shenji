@@ -1,9 +1,9 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize};
 
-#[derive(
-    Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect, Serialize, Deserialize,
-)]
+use crate::game::action::ActionState;
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Reflect, Serialize, Deserialize)]
 #[reflect(Component)]
 pub struct Health {
     pub head: u8,
@@ -16,43 +16,58 @@ pub struct Health {
     pub hunger: u8,
 }
 
+impl Default for Health {
+    fn default() -> Self {
+        Self {
+            head: 100,
+            stomach: 100,
+            chest: 100,
+            left_arm: 100,
+            right_arm: 100,
+            left_leg: 100,
+            right_leg: 100,
+            hunger: 100,
+        }
+    }
+}
+
 #[derive(
     Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect, Serialize, Deserialize,
 )]
 #[reflect(Component)]
 pub struct Skills {
-    pub armor_smith: u8,
-    pub assassination: u8,
-    pub athletics: u8,
-    pub blunt: u8,
-    pub cooking: u8,
-    pub crossbows: u8,
-    pub crossbow_smith: u8,
-    pub dexterity: u8,
-    pub dodge: u8,
-    pub engineer: u8,
-    pub farming: u8,
-    pub hackers: u8,
-    pub heavy_weapons: u8,
-    pub katanas: u8,
-    pub labouring: u8,
-    pub lockpicking: u8,
-    pub martial_arts: u8,
-    pub medic: u8,
-    pub melee_attack: u8,
-    pub melee_defense: u8,
-    pub perception: u8,
-    pub polearms: u8,
-    pub robotics: u8,
-    pub sabres: u8,
-    pub science: u8,
-    pub scouting: u8,
-    pub stealth: u8,
-    pub strength: u8,
-    pub thievery: u8,
-    pub toughness: u8,
-    pub turrets: u8,
-    pub weapon_smith: u8,
+    pub armor_smith: u32,
+    pub assassination: u32,
+    pub athletics: u32,
+    pub blunt: u32,
+    pub cooking: u32,
+    pub crossbows: u32,
+    pub crossbow_smith: u32,
+    pub dexterity: u32,
+    pub dodge: u32,
+    pub engineer: u32,
+    pub farming: u32,
+    pub hackers: u32,
+    pub heavy_weapons: u32,
+    pub katanas: u32,
+    pub labouring: u32,
+    pub lockpicking: u32,
+    pub martial_arts: u32,
+    pub medic: u32,
+    pub melee_attack: u32,
+    pub melee_defense: u32,
+    pub perception: u32,
+    pub polearms: u32,
+    pub robotics: u32,
+    pub sabres: u32,
+    pub science: u32,
+    pub scouting: u32,
+    pub stealth: u32,
+    pub strength: u32,
+    pub thievery: u32,
+    pub toughness: u32,
+    pub turrets: u32,
+    pub weapon_smith: u32,
 }
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default, Reflect, Serialize, Deserialize)]
@@ -73,13 +88,18 @@ pub struct CharacterInfo {
     pub name: String,
     pub race: String,
     pub subrace: String,
-    pub location: String,
+}
+
+#[derive(Component, Clone, Debug, Default, Serialize, Deserialize, Reflect)]
+#[reflect(Component)]
+pub struct CharacterLocation {
+    pub location_id: String,
 }
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default, Reflect, Serialize, Deserialize)]
 #[reflect(Component)]
 pub struct Inventory {
-    pub items: HashMap<String, String>,
+    pub items: HashMap<String, u32>,
 }
 
 #[derive(
@@ -96,6 +116,8 @@ pub struct CharacterBundle {
     pub equipment: Equipment,
     pub inventory: Inventory,
     pub squad: Squad,
+    pub action_state: ActionState,
+    pub character_location: CharacterLocation,
 }
 
 impl Health {
@@ -114,7 +136,7 @@ impl Health {
 }
 
 impl Skills {
-    pub fn iter(&self) -> impl Iterator<Item = (&'static str, u8)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&'static str, u32)> {
         [
             ("Armor Smith", self.armor_smith),
             ("Assassination", self.assassination),
@@ -154,14 +176,19 @@ impl Skills {
 }
 
 impl CharacterBundle {
-    pub fn new(id: String, name: String, race: String, subrace: String, location: String) -> Self {
+    pub fn new(
+        id: String,
+        name: String,
+        race: String,
+        subrace: String,
+        location_id: String,
+    ) -> Self {
         Self {
             info: CharacterInfo {
                 id,
                 name,
                 race,
                 subrace,
-                location,
             },
             health: Health::default(),
             skills: Skills::default(),
@@ -170,6 +197,8 @@ impl CharacterBundle {
                 items: HashMap::new(),
             },
             squad: Squad(0),
+            action_state: ActionState::default(),
+            character_location: CharacterLocation { location_id },
         }
     }
 }
