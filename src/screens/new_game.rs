@@ -13,7 +13,7 @@ use crate::{
         data::GameData,
         location::{LocationInfo, LocationRegistry},
         research::ResearchState,
-        resources::{BaseInventory, BaseState, GameState, PlayerState, SquadState},
+        resources::{BaseInventory, BaseState, ExplorationState, GameState, PlayerState, SquadState},
         scenarios::{apply_scenario, get_all_scenarios},
         simulation::SimulationState,
     },
@@ -106,6 +106,7 @@ impl ImmediateAttach<CapsUi> for NewGameScreen {
                                                       mut research: ResMut<ResearchState>,
                                                       mut sim_state: ResMut<SimulationState>,
                                                       mut base_inv: ResMut<BaseInventory>,
+                                                      mut exploration_state: ResMut<ExplorationState>,
                                                       mut screen: ResMut<NextState<Screen>>,
                                                       game_data: Res<GameData>,
                                                       mut loc_registry: ResMut<LocationRegistry>,
@@ -115,7 +116,7 @@ impl ImmediateAttach<CapsUi> for NewGameScreen {
                                                     let old: Vec<Entity> = old_chars.iter().collect();
                                                     let old_loc: Vec<Entity> = old_locs.iter().collect();
                                                     let old_bldg: Vec<Entity> = old_buildings.iter().collect();
-                                                    apply_scenario(&mut commands, &s, &mut game, &mut player, &mut squad, &mut base, &mut research, &mut sim_state, &mut base_inv, &old, &game_data, &mut loc_registry, &old_loc, &old_bldg);
+                                                    apply_scenario(&mut commands, &s, &mut game, &mut player, &mut squad, &mut base, &mut research, &mut sim_state, &mut base_inv, &mut exploration_state, &old, &game_data, &mut loc_registry, &old_loc, &old_bldg);
                                                     screen.set(Screen::Gameplay);
                                                 })
                                         .add(|ui| { ui.ch().label("Start"); });

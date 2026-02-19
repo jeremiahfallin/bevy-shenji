@@ -13,8 +13,8 @@ use crate::game::location::{
 };
 use crate::game::research::ResearchState;
 use crate::game::resources::{
-    BaseInventory, BaseState, GameState, NotificationLevel, NotificationState, PlayerState,
-    SquadState,
+    BaseInventory, BaseState, ExplorationState, GameState, NotificationLevel, NotificationState,
+    PlayerState, SquadState,
 };
 use crate::game::simulation::SimulationState;
 use crate::screens::Screen;
@@ -111,6 +111,8 @@ pub struct SaveData {
     pub buildings: Option<Vec<SerializedBuilding>>,
     #[serde(default)]
     pub locations: Option<Vec<SerializedLocation>>,
+    #[serde(default)]
+    pub exploration_state: Option<ExplorationState>,
 }
 
 fn autosave_system(
@@ -139,6 +141,7 @@ fn save_game(
     research_state: Option<Res<ResearchState>>,
     sim_state: Res<SimulationState>,
     base_inventory: Res<BaseInventory>,
+    exploration_state: Res<ExplorationState>,
     character_query: Query<(
         &CharacterInfo,
         &Health,
@@ -209,6 +212,7 @@ fn save_game(
             characters: serialized_characters,
             buildings: Some(serialized_buildings),
             locations: Some(serialized_locations),
+            exploration_state: Some(exploration_state.clone()),
         };
 
         let filename = format!("assets/saves/{}.json", message.0);
@@ -297,6 +301,7 @@ fn poll_load_game(
     mut research_state: ResMut<ResearchState>,
     mut sim_state: ResMut<SimulationState>,
     mut base_inventory: ResMut<BaseInventory>,
+    mut exploration_state: ResMut<ExplorationState>,
     mut notifications: ResMut<NotificationState>,
     mut location_registry: ResMut<LocationRegistry>,
     old_characters: Query<Entity, With<CharacterInfo>>,
@@ -341,6 +346,7 @@ fn poll_load_game(
                     *research_state = save_data.research_state.unwrap_or_default();
                     *sim_state = save_data.simulation_state.unwrap_or_default();
                     *base_inventory = save_data.base_inventory.unwrap_or_default();
+                    *exploration_state = save_data.exploration_state.unwrap_or_default();
 
                     // 7. Respawn character entities from save data and rebuild the
                     //    entity map so SquadState.characters has valid Entity IDs.

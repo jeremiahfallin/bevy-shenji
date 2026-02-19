@@ -2,7 +2,7 @@ use super::character::Squad;
 use super::data::GameData;
 use super::location::{LocationInfo, LocationInventory, LocationRegistry, LocationResources};
 use super::research::ResearchState;
-use super::resources::{BaseInventory, BaseState, GameState, PlayerState, SquadState};
+use super::resources::{BaseInventory, BaseState, ExplorationState, GameState, PlayerState, SquadState};
 use super::simulation::SimulationState;
 use bevy::prelude::*;
 
@@ -74,6 +74,7 @@ pub fn apply_scenario(
     research_state: &mut ResearchState,
     sim_state: &mut SimulationState,
     base_inventory: &mut BaseInventory,
+    exploration_state: &mut ExplorationState,
     old_characters: &[Entity],
     game_data: &GameData,
     location_registry: &mut LocationRegistry,
@@ -113,6 +114,7 @@ pub fn apply_scenario(
 
     // Reset base inventory and give starting items based on scenario
     *base_inventory = BaseInventory::default();
+    *exploration_state = ExplorationState::default();
     match scenario.id.as_str() {
         "lone_wanderer" => {
             base_inventory.add("zeni", 500);
