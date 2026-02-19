@@ -1,10 +1,15 @@
 use bevy::prelude::*;
 
+pub mod action;
+pub mod building;
 pub mod character;
+pub mod data;
+pub mod location;
 pub mod research;
 pub mod resources;
 pub mod save;
 pub mod scenarios;
+pub mod simulation;
 pub mod systems;
 pub mod ui;
 
@@ -13,7 +18,8 @@ pub fn plugin(app: &mut App) {
     app.init_resource::<resources::PlayerState>();
     app.init_resource::<resources::SquadState>();
     app.init_resource::<resources::NotificationState>();
-    app.init_resource::<research::TechTree>();
+    app.init_resource::<resources::BaseInventory>();
+    app.init_resource::<resources::ExplorationState>();
     app.init_resource::<research::ResearchState>();
     app.init_resource::<resources::BaseState>();
 
@@ -22,9 +28,16 @@ pub fn plugin(app: &mut App) {
     app.register_type::<resources::PlayerState>();
     app.register_type::<resources::SquadState>();
     app.register_type::<resources::NotificationState>();
+    app.register_type::<resources::BaseInventory>();
+    app.register_type::<resources::ExplorationState>();
 
     app.add_systems(Update, tick_notifications);
 
+    data::plugin(app);
+    action::plugin(app);
+    building::plugin(app);
+    location::plugin(app);
+    simulation::plugin(app);
     app.add_plugins(save::plugin);
     app.add_plugins(ui::plugin);
 }

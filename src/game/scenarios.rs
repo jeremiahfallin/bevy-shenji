@@ -1,6 +1,11 @@
 use super::character::Squad;
+use super::data::GameData;
+use super::location::{LocationInfo, LocationInventory, LocationRegistry, LocationResources};
 use super::research::ResearchState;
-use super::resources::{BaseState, GameState, PlayerState, SquadState};
+use super::resources::{
+    BaseInventory, BaseState, ExplorationState, GameState, PlayerState, SquadState,
+};
+use super::simulation::SimulationState;
 use bevy::prelude::*;
 
 #[derive(Debug, Clone)]
@@ -69,13 +74,32 @@ pub fn apply_scenario(
     squad_state: &mut SquadState,
     base_state: &mut BaseState,
     research_state: &mut ResearchState,
+    sim_state: &mut SimulationState,
+    base_inventory: &mut BaseInventory,
+    exploration_state: &mut ExplorationState,
     old_characters: &[Entity],
+    game_data: &GameData,
+    location_registry: &mut LocationRegistry,
+    old_locations: &[Entity],
+    old_buildings: &[Entity],
 ) {
     // Despawn any existing character entities to prevent orphans/duplicates.
     for &entity in old_characters {
         commands.entity(entity).despawn();
     }
 
+    // Despawn any existing location entities.
+    for &entity in old_locations {
+        commands.entity(entity).despawn();
+    }
+    location_registry.locations.clear();
+
+    // Despawn any existing building entities.
+    for &entity in old_buildings {
+        commands.entity(entity).despawn();
+    }
+
+    // Reset all game state
     game_state.reset();
     game_state.current_level = scenario.starting_level;
 
@@ -86,6 +110,28 @@ pub fn apply_scenario(
     *squad_state = SquadState::default();
     *base_state = BaseState::default();
     *research_state = ResearchState::default();
+
+    // Reset simulation state to fresh defaults
+    *sim_state = SimulationState::default();
+
+    // Reset base inventory and give starting items based on scenario
+    *base_inventory = BaseInventory::default();
+    *exploration_state = ExplorationState::default();
+    match scenario.id.as_str() {
+        "lone_wanderer" => {
+            base_inventory.add("zeni", 500);
+            base_inventory.add("bread", 10);
+            base_inventory.add("books", 2);
+        }
+        "squad_up" => {
+            base_inventory.add("zeni", 1000);
+            base_inventory.add("bread", 20);
+            base_inventory.add("books", 5);
+            base_inventory.add("lumber", 10);
+            base_inventory.add("stone", 10);
+        }
+        _ => {}
+    }
 
     for template in &scenario.starting_characters {
         // Generate a new ID for the character
@@ -98,7 +144,7 @@ pub fn apply_scenario(
             template.name.clone(),
             template.race.clone(),
             template.subrace.clone(),
-            "Home Base".to_string(),
+            "base".to_string(),
         );
 
         // Spawn the entity
@@ -118,5 +164,30 @@ pub fn apply_scenario(
         if template.starting_squad > 0 {
             squad_state.add_member_to_squad(&id, template.starting_squad);
         }
+    }
+
+    // Spawn location entities from GameData
+    for loc_def in &game_data.locations {
+        let entity = commands
+            .spawn((
+                LocationInfo {
+                    id: loc_def.id.clone(),
+                    name: loc_def.name.clone(),
+                    loc_type: loc_def.loc_type.clone(),
+                    distance: loc_def.distance,
+                    discovered: loc_def.discovered,
+                },
+                LocationResources {
+                    resource_type: loc_def.resource_type.clone(),
+                    capacity: loc_def.capacity,
+                    yield_rate: loc_def.yield_rate,
+                    current_amount: loc_def.capacity, // Start full
+                },
+                LocationInventory::default(),
+            ))
+            .id();
+        location_registry
+            .locations
+            .insert(loc_def.id.clone(), entity);
     }
 }

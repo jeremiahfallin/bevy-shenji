@@ -1,5 +1,5 @@
 use crate::game::{
-    character::{CharacterInfo, Health},
+    character::{CharacterInfo, CharacterLocation, Health},
     resources::SquadState,
 };
 use crate::theme::prelude::*;
@@ -16,7 +16,12 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins(BevyImmediateAttachPlugin::<CapsUi, SquadsDisplay>::new());
 }
 
-pub fn render_character_card(ui: &mut Imm<CapsUi>, info: &CharacterInfo, health: &Health) {
+pub fn render_character_card(
+    ui: &mut Imm<CapsUi>,
+    info: &CharacterInfo,
+    health: &Health,
+    char_location: &CharacterLocation,
+) {
     ui.ch()
         .flex_col()
         .p(Val::Px(16.0))
@@ -29,7 +34,8 @@ pub fn render_character_card(ui: &mut Imm<CapsUi>, info: &CharacterInfo, health:
             // Name and basic info
             ui.ch().header(&info.name);
             ui.ch().label(format!("{} - {}", info.race, info.subrace));
-            ui.ch().label(format!("Location: {}", info.location));
+            ui.ch()
+                .label(format!("Location: {}", char_location.location_id));
 
             ui.ch().on_spawn_insert(|| {
                 (
@@ -77,7 +83,15 @@ pub struct CharacterCard;
 impl ImmediateAttach<CapsUi> for CharacterCard {
     type Params = (
         Res<'static, SquadState>,
-        Query<'static, 'static, (&'static CharacterInfo, &'static Health)>,
+        Query<
+            'static,
+            'static,
+            (
+                &'static CharacterInfo,
+                &'static Health,
+                &'static CharacterLocation,
+            ),
+        >,
     );
 
     fn construct(
@@ -105,8 +119,8 @@ impl ImmediateAttach<CapsUi> for CharacterCard {
                     return;
                 };
 
-                if let Ok((info, health)) = characters.get(entity) {
-                    render_character_card(ui, info, health);
+                if let Ok((info, health, char_location)) = characters.get(entity) {
+                    render_character_card(ui, info, health, char_location);
                 } else {
                     ui.ch().label("Character missing data");
                 }
@@ -120,7 +134,15 @@ pub struct SquadsDisplay;
 impl ImmediateAttach<CapsUi> for SquadsDisplay {
     type Params = (
         Res<'static, SquadState>,
-        Query<'static, 'static, (&'static CharacterInfo, &'static Health)>,
+        Query<
+            'static,
+            'static,
+            (
+                &'static CharacterInfo,
+                &'static Health,
+                &'static CharacterLocation,
+            ),
+        >,
     );
 
     fn construct(
@@ -162,8 +184,15 @@ impl ImmediateAttach<CapsUi> for SquadsDisplay {
                                 } else {
                                     for char_id in &squad.members {
                                         if let Some(&entity) = squad_state.characters.get(char_id) {
-                                            if let Ok((info, health)) = characters.get(entity) {
-                                                render_character_card(ui, info, health);
+                                            if let Ok((info, health, char_location)) =
+                                                characters.get(entity)
+                                            {
+                                                render_character_card(
+                                                    ui,
+                                                    info,
+                                                    health,
+                                                    char_location,
+                                                );
                                             }
                                         }
                                     }
