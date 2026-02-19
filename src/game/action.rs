@@ -5,9 +5,14 @@ use std::collections::VecDeque;
 use crate::game::building::Building;
 use crate::game::character::{CharacterInfo, CharacterLocation, Inventory, Skills};
 use crate::game::data::{GameData, ResearchEffect};
-use crate::game::location::{LocationInfo, LocationInventory, LocationRegistry, LocationResources};
+use crate::game::location::{
+    LocationInfo, LocationInventory, LocationRegistry, LocationResources, LocationType,
+};
 use crate::game::research::ResearchState;
-use crate::game::resources::{BaseInventory, BaseState, NotificationLevel, NotificationState};
+use crate::game::resources::{
+    BaseInventory, BaseState, ExplorationState, NotificationLevel, NotificationState,
+};
+use crate::game::simulation::SimulationState;
 
 /// A single action a character can perform
 #[derive(Clone, Debug, Serialize, Deserialize, Reflect, PartialEq)]
@@ -478,44 +483,241 @@ fn process_build(
     }
 }
 
+/// Possible outcomes when an exploration completes.
+enum ExplorationOutcome {
+    DiscoverLandmark,
+    DiscoverResourceNode,
+    FindItems,
+    BonusXp,
+    Nothing,
+}
+
+const NODE_SIZES: &[&str] = &["Small", "Modest", "Rich", "Dense"];
+const NODE_TERRAINS_ORE: &[&str] = &["Vein", "Deposit", "Outcrop"];
+const NODE_TERRAINS_STONE: &[&str] = &["Quarry", "Outcrop"];
+const NODE_TERRAINS_LUMBER: &[&str] = &["Grove", "Thicket"];
+const GENERABLE_RESOURCES: &[&str] = &["lumber", "stone", "copper_ore", "iron_ore"];
+
+fn pick_weighted_outcome(weights: &[(ExplorationOutcome, u32)], roll: u32) -> &ExplorationOutcome {
+    let mut cumulative = 0;
+    for (outcome, weight) in weights {
+        cumulative += weight;
+        if roll < cumulative {
+            return outcome;
+        }
+    }
+    &weights.last().unwrap().0
+}
+
+fn xp_to_level(xp: u32) -> u32 {
+    (xp as f64).cbrt().floor() as u32
+}
+
+fn generate_node_name(resource_type: &str, game_time: u64) -> String {
+    let size = NODE_SIZES[(game_time as usize) % NODE_SIZES.len()];
+    let resource_display = match resource_type {
+        "copper_ore" => "Copper",
+        "iron_ore" => "Iron",
+        "stone" => "Stone",
+        "lumber" => "Lumber",
+        _ => resource_type,
+    };
+    let terrains: &[&str] = match resource_type {
+        "lumber" => NODE_TERRAINS_LUMBER,
+        "stone" => NODE_TERRAINS_STONE,
+        _ => NODE_TERRAINS_ORE,
+    };
+    let terrain = terrains[((game_time / 7) as usize) % terrains.len()];
+    format!("{} {} {}", size, resource_display, terrain)
+}
+
+fn generate_node_distance(existing_count: u32, game_time: u64) -> u32 {
+    let (min_dist, max_dist) = match existing_count {
+        0 => (15, 25),
+        1 => (30, 50),
+        _ => (50, 80),
+    };
+    let range = max_dist - min_dist;
+    min_dist + ((game_time as u32) % (range + 1))
+}
+
+fn generate_node_capacity(game_time: u64) -> u32 {
+    100 + ((game_time as u32) % 201)
+}
+
 fn process_explore(
-    mut characters: Query<(&mut ActionState, &Skills)>,
-    mut locations: Query<&mut LocationInfo>,
+    mut commands: Commands,
+    mut characters: Query<(&mut ActionState, &mut Skills, &CharacterInfo)>,
+    mut locations: Query<(Entity, &mut LocationInfo)>,
     mut notifications: ResMut<NotificationState>,
+    mut exploration_state: ResMut<ExplorationState>,
+    mut base_inventory: ResMut<BaseInventory>,
+    mut location_registry: ResMut<LocationRegistry>,
+    game_data: Res<GameData>,
+    sim: Res<SimulationState>,
 ) {
-    for (mut state, skills) in &mut characters {
+    for (mut state, mut skills, info) in &mut characters {
         if !matches!(&state.current_action, Some(Action::Explore)) {
             continue;
         }
 
-        // Initialize progress based on scouting skill
         if state.progress.required == 0 {
-            let required = (200u32).saturating_sub(skills.scouting * 5).max(50);
+            let scouting_level = xp_to_level(skills.scouting);
+            let base_time = 100u32;
+            let required = base_time.saturating_sub(scouting_level * 2).max(50);
             state.progress = ActionProgress::new(required);
         }
 
-        if state.progress.tick() {
-            // Find the first undiscovered location and mark it as discovered
-            let mut discovered_name = None;
-            for mut loc_info in &mut locations {
-                if !loc_info.discovered {
-                    loc_info.discovered = true;
-                    discovered_name = Some(loc_info.name.clone());
-                    break;
+        if !state.progress.tick() {
+            continue;
+        }
+
+        let scouting_level = xp_to_level(skills.scouting);
+        let undiscovered_count = locations.iter().filter(|(_, l)| !l.discovered).count() as u32;
+        let can_generate_any = GENERABLE_RESOURCES
+            .iter()
+            .any(|r| exploration_state.can_generate(r));
+
+        let mut weights: Vec<(ExplorationOutcome, u32)> = Vec::new();
+
+        if undiscovered_count > 0 {
+            weights.push((ExplorationOutcome::DiscoverLandmark, undiscovered_count * 15));
+        }
+        if can_generate_any {
+            weights.push((
+                ExplorationOutcome::DiscoverResourceNode,
+                scouting_level * 3 + 1,
+            ));
+        }
+        weights.push((ExplorationOutcome::FindItems, 10));
+        weights.push((ExplorationOutcome::BonusXp, 8));
+        let nothing_weight = 50 / scouting_level.max(1);
+        if nothing_weight > 0 {
+            weights.push((ExplorationOutcome::Nothing, nothing_weight));
+        }
+
+        let total_weight: u32 = weights.iter().map(|(_, w)| *w).sum();
+        let roll = (sim.game_time as u32).wrapping_mul(31337) % total_weight;
+        let outcome = pick_weighted_outcome(&weights, roll);
+        exploration_state.total_explorations += 1;
+
+        match outcome {
+            ExplorationOutcome::DiscoverLandmark => {
+                // Find the closest undiscovered location
+                let mut best: Option<(Entity, String, u32)> = None;
+                for (entity, loc) in locations.iter() {
+                    if !loc.discovered {
+                        if best.is_none() || loc.distance < best.as_ref().unwrap().2 {
+                            best = Some((entity, loc.name.clone(), loc.distance));
+                        }
+                    }
+                }
+                if let Some((entity, name, _)) = best {
+                    if let Ok((_, mut loc)) = locations.get_mut(entity) {
+                        loc.discovered = true;
+                    }
+                    notifications.push(
+                        format!("Discovered: {}!", name),
+                        NotificationLevel::Success,
+                    );
                 }
             }
 
-            if let Some(name) = discovered_name {
-                notifications.push(format!("Discovered: {}", name), NotificationLevel::Success);
-            } else {
+            ExplorationOutcome::DiscoverResourceNode => {
+                let available: Vec<&&str> = GENERABLE_RESOURCES
+                    .iter()
+                    .filter(|r| exploration_state.can_generate(r))
+                    .collect();
+                if let Some(&&resource_type) =
+                    available.get((sim.game_time as usize) % available.len())
+                {
+                    let existing = exploration_state.generated_count(resource_type);
+                    let distance = generate_node_distance(existing, sim.game_time);
+                    let capacity = generate_node_capacity(sim.game_time);
+                    let name = generate_node_name(resource_type, sim.game_time);
+                    let id = format!("gen_{}_{}", resource_type, sim.game_time);
+                    let loc_type = match resource_type {
+                        "lumber" => LocationType::Forest,
+                        _ => LocationType::Mine,
+                    };
+                    let entity = commands
+                        .spawn((
+                            LocationInfo {
+                                id: id.clone(),
+                                name: name.clone(),
+                                loc_type,
+                                distance,
+                                discovered: true,
+                            },
+                            LocationResources {
+                                resource_type: resource_type.to_string(),
+                                capacity,
+                                yield_rate: 1,
+                                current_amount: capacity,
+                            },
+                            LocationInventory::default(),
+                        ))
+                        .id();
+                    location_registry.locations.insert(id, entity);
+                    exploration_state.record_generation(resource_type);
+                    notifications.push(
+                        format!("Discovered new location: {}!", name),
+                        NotificationLevel::Success,
+                    );
+                }
+            }
+
+            ExplorationOutcome::FindItems => {
+                let item_roll = (sim.game_time as u32).wrapping_mul(7919) % 100;
+                if scouting_level > 15 && item_roll < 15 {
+                    let rare_items = ["rare_gem", "ancient_artifact"];
+                    let item = rare_items[(sim.game_time as usize) % rare_items.len()];
+                    base_inventory.add(item, 1);
+                    let item_name = game_data
+                        .get_item(item)
+                        .map(|i| i.name.as_str())
+                        .unwrap_or(item);
+                    notifications.push(
+                        format!("Found rare item: {}!", item_name),
+                        NotificationLevel::Success,
+                    );
+                } else {
+                    let common_items = ["herbs", "scrap_wood", "copper_nuggets"];
+                    let item = common_items[(sim.game_time as usize) % common_items.len()];
+                    let quantity = 1 + (sim.game_time as u32 % 3);
+                    base_inventory.add(item, quantity);
+                    let item_name = game_data
+                        .get_item(item)
+                        .map(|i| i.name.as_str())
+                        .unwrap_or(item);
+                    notifications.push(
+                        format!("Found {} x{}!", item_name, quantity),
+                        NotificationLevel::Info,
+                    );
+                }
+            }
+
+            ExplorationOutcome::BonusXp => {
+                let race = &info.race;
+                let subrace = &info.subrace;
+                let scout_mult = game_data.get_xp_multiplier(race, subrace, "scouting");
+                let ath_mult = game_data.get_xp_multiplier(race, subrace, "athletics");
+                let scout_bonus = (10.0 * scout_mult).max(1.0).ceil() as u32;
+                let ath_bonus = (5.0 * ath_mult).max(1.0).ceil() as u32;
+                skills.scouting = skills.scouting.saturating_add(scout_bonus);
+                skills.athletics = skills.athletics.saturating_add(ath_bonus);
+                notifications.push("Gained exploration experience!", NotificationLevel::Info);
+            }
+
+            ExplorationOutcome::Nothing => {
                 notifications.push(
-                    "Exploration complete - no new locations found",
+                    "Exploration yielded nothing of interest.",
                     NotificationLevel::Info,
                 );
             }
-
-            state.current_action = None;
         }
+
+        state.current_action = None;
     }
 }
 
