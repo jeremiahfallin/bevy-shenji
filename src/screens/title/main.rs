@@ -31,16 +31,61 @@ pub struct MainMenu;
 struct LoadGameButton;
 
 impl ImmediateAttach<CapsUi> for MainMenu {
-    type Params = ();
+    type Params = Res<'static, AssetServer>;
 
-    fn construct(ui: &mut Imm<CapsUi>, _: &mut ()) {
-        // Buttons
+    fn construct(ui: &mut Imm<CapsUi>, asset_server: &mut Res<AssetServer>) {
+        let title_font: Handle<Font> = asset_server.load("fonts/Kenney Space.ttf");
+
+        // Full-screen centered layout
         ui.ch().style(style_main_menu_panel).add(|ui| {
+            // Title text: "SHENJI" in large decorative font
+            ui.ch()
+                .on_spawn_insert({
+                    let font = title_font.clone();
+                    move || {
+                        (
+                            Text::new("SHENJI"),
+                            TextFont {
+                                font: font.clone(),
+                                font_size: 72.0,
+                                ..default()
+                            },
+                            TextColor(GOLD_400),
+                            TextLayout {
+                                justify: Justify::Center,
+                                ..default()
+                            },
+                        )
+                    }
+                })
+                .style(|n| {
+                    n.margin.bottom = Val::Px(SPACE_1);
+                });
+
+            // Subtitle
+            ui.ch()
+                .label("A tale of strategy and survival")
+                .text_color(GRAY_500)
+                .text_size(14.0)
+                .text_center()
+                .style(|n| {
+                    n.margin.bottom = Val::Px(SPACE_10);
+                });
+
+            // Decorative separator line
+            ui.ch()
+                .style(|n| {
+                    n.width = Val::Px(200.0);
+                    n.height = Val::Px(1.0);
+                    n.margin.bottom = Val::Px(SPACE_8);
+                })
+                .bg(GOLD_500)
+                .opacity(0.3);
+
+            // Menu buttons
             ui.ch()
                 .button()
-                .style(|n| {
-                    n.width = Val::Px(240.0);
-                })
+                .style(style_menu_button)
                 .on_click_once(on_new_game_button)
                 .add(|ui| {
                     ui.ch().label("New Game");
@@ -48,9 +93,7 @@ impl ImmediateAttach<CapsUi> for MainMenu {
 
             ui.ch()
                 .button()
-                .style(|n| {
-                    n.width = Val::Px(240.0);
-                })
+                .style(style_menu_button)
                 .on_spawn_insert(|| LoadGameButton)
                 .add(|ui| {
                     ui.ch().label("Load Game");
@@ -58,9 +101,7 @@ impl ImmediateAttach<CapsUi> for MainMenu {
 
             ui.ch()
                 .button()
-                .style(|n| {
-                    n.width = Val::Px(240.0);
-                })
+                .style(style_menu_button)
                 .on_click_once(open_settings_menu)
                 .add(|ui| {
                     ui.ch().label("Settings");
@@ -68,9 +109,7 @@ impl ImmediateAttach<CapsUi> for MainMenu {
 
             ui.ch()
                 .button()
-                .style(|n| {
-                    n.width = Val::Px(240.0);
-                })
+                .style(style_menu_button)
                 .on_click_once(open_credits_menu)
                 .add(|ui| {
                     ui.ch().label("Credits");
@@ -81,9 +120,7 @@ impl ImmediateAttach<CapsUi> for MainMenu {
             {
                 ui.ch()
                     .button()
-                    .style(|n| {
-                        n.width = Val::Px(240.0);
-                    })
+                    .style(style_menu_button)
                     .on_click_once(exit_app)
                     .add(|ui| {
                         ui.ch().label("Exit");
@@ -99,14 +136,18 @@ fn style_main_menu_panel(n: &mut Node) {
     n.flex_direction = FlexDirection::Column;
     n.align_items = AlignItems::Center;
     n.justify_content = JustifyContent::Center;
-    n.row_gap = Val::Px(10.0);
+    n.row_gap = Val::Px(SPACE_2_5);
 
     n.padding = UiRect {
-        left: Val::Px(90.0),
-        right: Val::Px(90.0),
-        top: Val::Px(25.0),
-        bottom: Val::Px(40.0),
+        left: Val::Px(SPACE_24),
+        right: Val::Px(SPACE_24),
+        top: Val::Px(SPACE_6),
+        bottom: Val::Px(SPACE_10),
     };
+}
+
+fn style_menu_button(n: &mut Node) {
+    n.width = Val::Px(240.0);
 }
 
 fn spawn_main_menu(mut commands: Commands, ui_root: Res<UiRoot>) {

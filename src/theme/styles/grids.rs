@@ -15,6 +15,6 @@ where
             RepeatedGridTrack::auto(1),
             RepeatedGridTrack::flex(1, 1.0),
         ])
-        .row_gap(10.0)
-        .column_gap(20.0)
+        .row_gap(SPACE_2_5)
+        .column_gap(SPACE_5)
 }

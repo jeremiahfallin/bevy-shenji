@@ -32,7 +32,7 @@ where
     Cap: ImplCap<CapabilityUiLayout> + ImplCap<CapabilityUiBase>,
 {
     fn p_4(self) -> Self {
-        self.p(Val::Px(16.0))
+        self.p(Val::Px(SPACE_4))
     }
 
     fn bg_red(self) -> Self {

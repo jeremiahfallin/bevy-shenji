@@ -16,7 +16,7 @@ where
     entity
         .bg(PRIMARY_500)
         .h(Val::Px(40.0))
-        .px(Val::Px(16.0))
+        .px(Val::Px(SPACE_4))
         .rounded(6.0)
         .flex_row()
         .items_center()

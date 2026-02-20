@@ -28,28 +28,32 @@ impl ImmediateAttach<CapsUi> for SquadsView {
             ui.ch().flex().flex_col().scrollarea(
                 |n| {
                     n.flex_direction = FlexDirection::Column;
-                    n.row_gap = Val::Px(10.0);
+                    n.row_gap = Val::Px(SPACE_2_5);
                 },
                 |ui| {
-                    ui.ch().flex_col().flex_grow().p(Val::Px(10.0)).add(|ui| {
-                        for squad in state.squads.values() {
-                            // Squad Header
-                            ui.ch()
-                                .label(&squad.name)
-                                .text_size(20.0)
-                                .text_color(Color::WHITE);
+                    ui.ch()
+                        .flex_col()
+                        .flex_grow()
+                        .p(Val::Px(SPACE_2_5))
+                        .add(|ui| {
+                            for squad in state.squads.values() {
+                                // Squad Header
+                                ui.ch()
+                                    .label(&squad.name)
+                                    .text_size(20.0)
+                                    .text_color(Color::WHITE);
 
-                            // Members List
-                            ui.ch().flex_col().pl(Val::Px(10.0)).add(|ui| {
-                                for member_id in squad.members.iter() {
-                                    if let Some(&entity) = state.characters.get(member_id) {
-                                        if let Ok(info) = character_query.get(entity) {
-                                            // Make it a BUTTON to select the character
-                                            // We need to clone the ID to pass it into the closure
-                                            let char_id = info.id.clone();
-                                            let char_name = info.name.clone();
+                                // Members List
+                                ui.ch().flex_col().pl(Val::Px(10.0)).add(|ui| {
+                                    for member_id in squad.members.iter() {
+                                        if let Some(&entity) = state.characters.get(member_id) {
+                                            if let Ok(info) = character_query.get(entity) {
+                                                // Make it a BUTTON to select the character
+                                                // We need to clone the ID to pass it into the closure
+                                                let char_id = info.id.clone();
+                                                let char_name = info.name.clone();
 
-                                            ui.ch().button().on_click_once(
+                                                ui.ch().button().on_click_once(
                                         move |_trigger: On<Pointer<Click>>,
                                               mut inspector: ResMut<InspectorState>| {
                                             inspector.selected_character_id =
@@ -66,21 +70,25 @@ impl ImmediateAttach<CapsUi> for SquadsView {
                                             .label(char_name)
                                             .text_color(Color::srgb(0.9, 0.9, 0.9));
                                     });
+                                            }
                                         }
                                     }
-                                }
-                            });
-                        }
-                    });
+                                });
+                            }
+                        });
                 },
             );
 
-            ui.ch().flex_col().flex_grow().p(Val::Px(10.0)).add(|ui| {
-                ui.ch()
-                    .w_full()
-                    .h_full()
-                    .on_spawn_insert(|| CharacterInspector);
-            });
+            ui.ch()
+                .flex_col()
+                .flex_grow()
+                .p(Val::Px(SPACE_2_5))
+                .add(|ui| {
+                    ui.ch()
+                        .w_full()
+                        .h_full()
+                        .on_spawn_insert(|| CharacterInspector);
+                });
         });
     }
 }

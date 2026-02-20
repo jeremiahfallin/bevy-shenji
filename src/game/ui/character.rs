@@ -24,12 +24,12 @@ pub fn render_character_card(
 ) {
     ui.ch()
         .flex_col()
-        .p(Val::Px(16.0))
+        .p(Val::Px(SPACE_4))
         .bg(Color::srgba(0.12, 0.14, 0.16, 0.8))
         .rounded(8.0)
         .border(1.0)
         .border_color(Color::srgb(0.33, 0.33, 0.33))
-        .mb(Val::Px(10.0))
+        .mb(Val::Px(SPACE_2_5))
         .add(|ui| {
             // Name and basic info
             ui.ch().header(&info.name);
@@ -105,7 +105,7 @@ impl ImmediateAttach<CapsUi> for CharacterCard {
             .on_spawn_insert(|| Node {
                 display: Display::Flex,
                 flex_direction: FlexDirection::Column,
-                row_gap: Val::Px(10.0),
+                row_gap: Val::Px(SPACE_2_5),
                 ..default()
             })
             .add(|ui| {
@@ -156,7 +156,7 @@ impl ImmediateAttach<CapsUi> for SquadsDisplay {
             .on_spawn_insert(|| Node {
                 display: Display::Flex,
                 flex_direction: FlexDirection::Column,
-                row_gap: Val::Px(20.0),
+                row_gap: Val::Px(SPACE_5),
                 ..default()
             })
             .add(|ui| {
@@ -172,7 +172,7 @@ impl ImmediateAttach<CapsUi> for SquadsDisplay {
                         .on_spawn_insert(|| Node {
                             display: Display::Flex,
                             flex_direction: FlexDirection::Column,
-                            row_gap: Val::Px(10.0),
+                            row_gap: Val::Px(SPACE_2_5),
                             ..default()
                         })
                         .add(|ui| {

@@ -37,7 +37,7 @@ where
     entity
         .flex_col()
         .w(Val::Percent(50.0))
-        .p(Val::Px(10.0))
+        .p(Val::Px(SPACE_2_5))
         .rounded(8.0)
         .bg(GRAY_700)
 }

@@ -79,7 +79,7 @@ where
         // Just setup the container layout here.
         // We defer content injection to the chainable methods.
         self.button().style(|s| {
-            s.column_gap = Val::Px(8.0);
+            s.column_gap = Val::Px(SPACE_2);
             // Ensure items align correctly regardless of order
             s.align_items = AlignItems::Center;
         })

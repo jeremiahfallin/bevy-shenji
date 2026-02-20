@@ -85,7 +85,7 @@ impl Plugin for AppPlugin {
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
                     flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(20.0),
+                    row_gap: Val::Px(SPACE_5),
                     ..default()
                 },
                 Visibility::default(),
