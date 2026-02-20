@@ -39,7 +39,7 @@ impl ImmediateAttach<CapsUi> for SettingsMenu {
             // Grid Item 2: Controls
             ui.ch()
                 .flex_row()
-                .column_gap(10.0)
+                .column_gap(SPACE_2_5)
                 .items_center()
                 .add(|ui| {
                     let mut btn = ui.ch().button();

@@ -21,7 +21,7 @@ impl ImmediateAttach<CapsUi> for CharactersView {
         let (character_query,) = params;
         ui.ch().header("Characters");
 
-        ui.ch().flex_col().w_full().p(Val::Px(10.0)).add(|ui| {
+        ui.ch().flex_col().w_full().p(Val::Px(SPACE_2_5)).add(|ui| {
             for (entity, info) in character_query.iter() {
                 let char_id = info.id.clone();
                 let char_name = info.name.clone();
@@ -29,8 +29,8 @@ impl ImmediateAttach<CapsUi> for CharactersView {
                 ui.ch()
                     .button()
                     .w_full()
-                    .mb(Val::Px(5.0))
-                    .p(Val::Px(10.0))
+                    .mb(Val::Px(SPACE_1))
+                    .p(Val::Px(SPACE_2_5))
                     // Standard Left Click (Selection)
                     .on_click_once(
                         move |trigger: On<Pointer<Click>>,

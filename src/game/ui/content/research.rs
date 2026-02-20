@@ -34,8 +34,8 @@ impl ImmediateAttach<CapsUi> for ResearchView {
                 ui.ch()
                     .flex_row()
                     .w_full()
-                    .p(Val::Px(8.0))
-                    .mb(Val::Px(10.0))
+                    .p(Val::Px(SPACE_2))
+                    .mb(Val::Px(SPACE_2_5))
                     .rounded(4.0)
                     .bg(Color::srgb(0.15, 0.15, 0.3))
                     .add(|ui| {
@@ -63,12 +63,12 @@ impl ImmediateAttach<CapsUi> for ResearchView {
                     .flex_col()
                     .w(Val::Px(280.0))
                     .h_full()
-                    .p(Val::Px(10.0))
+                    .p(Val::Px(SPACE_2_5))
                     .scroll_y()
                     .add(|ui| {
                         ui.ch()
                             .label(format!("Tech Level {}", tech_level))
-                            .mb(Val::Px(10.0));
+                            .mb(Val::Px(SPACE_2_5));
 
                         // Collect and sort research for this tech level
                         let mut research_in_level: Vec<_> = game_data
@@ -94,8 +94,8 @@ impl ImmediateAttach<CapsUi> for ResearchView {
                             // Card container
                             ui.ch()
                                 .flex_col()
-                                .p(Val::Px(10.0))
-                                .mb(Val::Px(10.0))
+                                .p(Val::Px(SPACE_2_5))
+                                .mb(Val::Px(SPACE_2_5))
                                 .rounded(4.0)
                                 .bg(if is_unlocked {
                                     Color::srgb(0.2, 0.5, 0.2) // Green (Done)

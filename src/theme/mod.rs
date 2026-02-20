@@ -20,6 +20,7 @@ pub mod prelude {
     pub use super::styles::containers::*;
     pub use super::styles::grids::*;
     pub use super::styles::palette::*;
+    pub use super::styles::spacing::*;
     pub use super::styles::typography::*;
     pub use super::widgets::*;
 }

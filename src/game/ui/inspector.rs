@@ -120,7 +120,7 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
             .flex_col()
             .flex_grow()
             .apply(style_panel_central)
-            .p(Val::Px(15.0))
+            .p(Val::Px(SPACE_4))
             .add(|ui| {
                 // --- Action Status Header ---
                 render_action_status(ui, entity_id, action_state);
@@ -131,7 +131,7 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                         Node {
                             height: Val::Px(1.0),
                             width: Val::Percent(100.0),
-                            margin: UiRect::axes(Val::Px(0.0), Val::Px(6.0)),
+                            margin: UiRect::axes(Val::Px(SPACE_0), Val::Px(SPACE_1_5)),
                             ..default()
                         },
                         BackgroundColor(GRAY_700),
@@ -143,8 +143,8 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                 ui.ch()
                     .flex_row()
                     .w_full()
-                    .mb(Val::Px(10.0))
-                    .column_gap(4.0)
+                    .mb(Val::Px(SPACE_2_5))
+                    .column_gap(SPACE_1)
                     .add(|ui| {
                         tab_button(ui, "Health", InspectorTab::Health, active);
                         tab_button(ui, "Equipment", InspectorTab::Equipment, active);
@@ -161,7 +161,7 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                                 .flex_row()
                                 .justify_between()
                                 .w_full()
-                                .mb(Val::Px(5.0))
+                                .mb(Val::Px(SPACE_1))
                                 .add(|ui| {
                                     ui.ch().label(part).text_color(Color::srgb(0.8, 0.8, 0.8));
                                     let color = if hp > 80 {
@@ -174,7 +174,10 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                                     ui.ch().label(format!("{}", hp)).text_color(color);
                                 });
                         }
-                        ui.ch().label("Status").mt(Val::Px(10.0)).mb(Val::Px(5.0));
+                        ui.ch()
+                            .label("Status")
+                            .mt(Val::Px(SPACE_2_5))
+                            .mb(Val::Px(SPACE_1));
                         ui.ch().label(format!("Hunger: {}", health.hunger));
                     }
                     InspectorTab::Equipment => {
@@ -197,7 +200,7 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
                                         .flex_row()
                                         .justify_between()
                                         .w_full()
-                                        .mb(Val::Px(2.0))
+                                        .mb(Val::Px(SPACE_0_5))
                                         .add(|ui| {
                                             ui.ch()
                                                 .label(skill)
@@ -242,23 +245,27 @@ impl ImmediateAttach<CapsUi> for CharacterInspector {
 
 /// Render the action status header showing current action, progress, queue counts.
 fn render_action_status(ui: &mut Imm<CapsUi>, entity_id: Entity, action_state: &ActionState) {
-    ui.ch().flex_col().w_full().mb(Val::Px(4.0)).add(|ui| {
+    ui.ch().flex_col().w_full().mb(Val::Px(SPACE_1)).add(|ui| {
         // Current action line
         let action_text = match &action_state.current_action {
             Some(action) => format_action(action),
             None => "Idle".to_string(),
         };
 
-        ui.ch().flex_row().w_full().mb(Val::Px(2.0)).add(|ui| {
-            ui.ch()
-                .label("Action: ")
-                .text_size(12.0)
-                .text_color(Color::srgb(0.6, 0.6, 0.6));
-            ui.ch()
-                .label(&action_text)
-                .text_size(12.0)
-                .text_color(Color::WHITE);
-        });
+        ui.ch()
+            .flex_row()
+            .w_full()
+            .mb(Val::Px(SPACE_0_5))
+            .add(|ui| {
+                ui.ch()
+                    .label("Action: ")
+                    .text_size(12.0)
+                    .text_color(Color::srgb(0.6, 0.6, 0.6));
+                ui.ch()
+                    .label(&action_text)
+                    .text_size(12.0)
+                    .text_color(Color::WHITE);
+            });
 
         // Progress bar (if there's a current non-idle action with progress)
         if action_state.current_action.is_some()
@@ -268,37 +275,41 @@ fn render_action_status(ui: &mut Imm<CapsUi>, entity_id: Entity, action_state: &
             let fraction = action_state.progress.fraction();
             let pct = (fraction * 100.0) as u32;
 
-            ui.ch().flex_row().w_full().mb(Val::Px(2.0)).add(|ui| {
-                // Progress bar background
-                ui.ch()
-                    .style(|n: &mut Node| {
-                        n.width = Val::Percent(70.0);
-                        n.height = Val::Px(8.0);
-                    })
-                    .bg(GRAY_700)
-                    .rounded(2.0)
-                    .add(move |ui| {
-                        // Progress bar fill
-                        ui.ch()
-                            .style(move |n: &mut Node| {
-                                n.width = Val::Percent(fraction * 100.0);
-                                n.height = Val::Percent(100.0);
-                            })
-                            .bg(PRIMARY_500)
-                            .rounded(2.0);
-                    });
+            ui.ch()
+                .flex_row()
+                .w_full()
+                .mb(Val::Px(SPACE_0_5))
+                .add(|ui| {
+                    // Progress bar background
+                    ui.ch()
+                        .style(|n: &mut Node| {
+                            n.width = Val::Percent(70.0);
+                            n.height = Val::Px(8.0);
+                        })
+                        .bg(GRAY_700)
+                        .rounded(2.0)
+                        .add(move |ui| {
+                            // Progress bar fill
+                            ui.ch()
+                                .style(move |n: &mut Node| {
+                                    n.width = Val::Percent(fraction * 100.0);
+                                    n.height = Val::Percent(100.0);
+                                })
+                                .bg(PRIMARY_500)
+                                .rounded(2.0);
+                        });
 
-                ui.ch()
-                    .label(format!(" {}%", pct))
-                    .text_size(11.0)
-                    .text_color(Color::srgb(0.7, 0.7, 0.7));
-            });
+                    ui.ch()
+                        .label(format!(" {}%", pct))
+                        .text_size(11.0)
+                        .text_color(Color::srgb(0.7, 0.7, 0.7));
+                });
         }
 
         // Queue counts
         let queue_count = action_state.action_queue.len();
         let job_count = action_state.job_queue.len();
-        ui.ch().flex_row().w_full().column_gap(12.0).add(|ui| {
+        ui.ch().flex_row().w_full().column_gap(SPACE_3).add(|ui| {
             ui.ch()
                 .label(format!("Queued: {}", queue_count))
                 .text_size(11.0)
@@ -313,8 +324,8 @@ fn render_action_status(ui: &mut Imm<CapsUi>, entity_id: Entity, action_state: &
         ui.ch()
             .flex_row()
             .w_full()
-            .mt(Val::Px(4.0))
-            .column_gap(4.0)
+            .mt(Val::Px(SPACE_1))
+            .column_gap(SPACE_1)
             .add(|ui| {
                 // Clear Actions button
                 {
@@ -322,7 +333,7 @@ fn render_action_status(ui: &mut Imm<CapsUi>, entity_id: Entity, action_state: &
                     ui.ch()
                         .button()
                         .style(|n: &mut Node| {
-                            n.padding = UiRect::axes(Val::Px(6.0), Val::Px(2.0));
+                            n.padding = UiRect::axes(Val::Px(SPACE_1_5), Val::Px(SPACE_0_5));
                         })
                         .bg(GRAY_700)
                         .on_click_once(
@@ -347,7 +358,7 @@ fn render_action_status(ui: &mut Imm<CapsUi>, entity_id: Entity, action_state: &
                     ui.ch()
                         .button()
                         .style(|n: &mut Node| {
-                            n.padding = UiRect::axes(Val::Px(6.0), Val::Px(2.0));
+                            n.padding = UiRect::axes(Val::Px(SPACE_1_5), Val::Px(SPACE_0_5));
                         })
                         .bg(GRAY_700)
                         .on_click_once(
@@ -383,13 +394,13 @@ fn render_jobs_tab(
             ui.ch()
                 .label("No jobs assigned")
                 .text_color(Color::srgb(0.5, 0.5, 0.5))
-                .mb(Val::Px(8.0));
+                .mb(Val::Px(SPACE_2));
         } else {
             ui.ch()
                 .label("Job Queue:")
                 .text_size(13.0)
                 .text_color(Color::srgb(0.8, 0.8, 0.8))
-                .mb(Val::Px(4.0));
+                .mb(Val::Px(SPACE_1));
 
             for (i, job) in action_state.job_queue.iter().enumerate() {
                 let is_current = action_state.current_job_index > 0
@@ -399,7 +410,7 @@ fn render_jobs_tab(
                     .flex_row()
                     .w_full()
                     .justify_between()
-                    .mb(Val::Px(2.0))
+                    .mb(Val::Px(SPACE_0_5))
                     .add(|ui| {
                         let prefix = if is_current { "> " } else { "  " };
                         let color = if is_current {
@@ -427,7 +438,7 @@ fn render_jobs_tab(
                 Node {
                     height: Val::Px(1.0),
                     width: Val::Percent(100.0),
-                    margin: UiRect::axes(Val::Px(0.0), Val::Px(6.0)),
+                    margin: UiRect::axes(Val::Px(SPACE_0), Val::Px(SPACE_1_5)),
                     ..default()
                 },
                 BackgroundColor(GRAY_700),
@@ -443,7 +454,7 @@ fn render_jobs_tab(
                         .button()
                         .w_full()
                         .style(|n: &mut Node| {
-                            n.padding = UiRect::axes(Val::Px(8.0), Val::Px(4.0));
+                            n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
                         })
                         .bg(GRAY_700)
                         .on_click_once(
@@ -470,17 +481,17 @@ fn render_jobs_tab(
                     .label("Select resource to gather:")
                     .text_size(12.0)
                     .text_color(Color::srgb(0.8, 0.8, 0.8))
-                    .mb(Val::Px(4.0));
+                    .mb(Val::Px(SPACE_1));
 
                 // Back button
                 ui.ch()
                     .button()
                     .w_full()
                     .style(|n: &mut Node| {
-                        n.padding = UiRect::axes(Val::Px(8.0), Val::Px(3.0));
+                        n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
                     })
                     .bg(GRAY_700)
-                    .mb(Val::Px(2.0))
+                    .mb(Val::Px(SPACE_0_5))
                     .on_click_once(
                         move |_: On<Pointer<Click>>, mut inspector: ResMut<InspectorState>| {
                             inspector.job_picker_mode = JobPickerMode::None;
@@ -504,10 +515,10 @@ fn render_jobs_tab(
                         .button()
                         .w_full()
                         .style(|n: &mut Node| {
-                            n.padding = UiRect::axes(Val::Px(8.0), Val::Px(3.0));
+                            n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
                         })
                         .bg(GRAY_700)
-                        .mb(Val::Px(2.0))
+                        .mb(Val::Px(SPACE_0_5))
                         .on_click_once(
                             move |_: On<Pointer<Click>>,
                                   mut inspector: ResMut<InspectorState>,
@@ -588,7 +599,7 @@ fn display_equip_slot(ui: &mut Imm<CapsUi>, slot_name: &str, item: &Option<Strin
         .flex_row()
         .justify_between()
         .w_full()
-        .mb(Val::Px(5.0))
+        .mb(Val::Px(SPACE_1))
         .add(|ui| {
             ui.ch()
                 .label(slot_name)

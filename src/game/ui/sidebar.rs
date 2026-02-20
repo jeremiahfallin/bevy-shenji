@@ -43,35 +43,39 @@ impl ImmediateAttach<CapsUi> for Sidebar {
             .justify_between()
             .add(|ui| {
                 // Navigation buttons
-                ui.ch().flex_col().row_gap(2.0).p(Val::Px(8.0)).add(|ui| {
-                    let mut nav_btn = |label: &str, icon: Icon, view: GameView| {
-                        let is_active = ui_state.active_view == view;
-                        let target_view = view;
+                ui.ch()
+                    .flex_col()
+                    .row_gap(SPACE_0_5)
+                    .p(Val::Px(SPACE_2))
+                    .add(|ui| {
+                        let mut nav_btn = |label: &str, icon: Icon, view: GameView| {
+                            let is_active = ui_state.active_view == view;
+                            let target_view = view;
 
-                        ui.ch()
-                            .icon_button()
-                            .with_icon(icon)
-                            .with_label(label)
-                            .apply(|e| if is_active { e.bg(GRAY_700) } else { e })
-                            .on_click_once(
-                                move |_: On<Pointer<Click>>, mut state: ResMut<UiState>| {
-                                    state.active_view = target_view;
-                                },
-                            );
-                    };
+                            ui.ch()
+                                .icon_button()
+                                .with_icon(icon)
+                                .with_label(label)
+                                .apply(|e| if is_active { e.bg(GRAY_700) } else { e })
+                                .on_click_once(
+                                    move |_: On<Pointer<Click>>, mut state: ResMut<UiState>| {
+                                        state.active_view = target_view;
+                                    },
+                                );
+                        };
 
-                    nav_btn("Dashboard", Icon::LayoutDashboard, GameView::Dashboard);
-                    nav_btn("Research", Icon::Book, GameView::Research);
-                    nav_btn("Squads", Icon::Group, GameView::Squads);
-                    nav_btn("Characters", Icon::User, GameView::Characters);
-                    nav_btn("Locations", Icon::Map, GameView::Locations);
-                });
+                        nav_btn("Dashboard", Icon::LayoutDashboard, GameView::Dashboard);
+                        nav_btn("Research", Icon::Book, GameView::Research);
+                        nav_btn("Squads", Icon::Group, GameView::Squads);
+                        nav_btn("Characters", Icon::User, GameView::Characters);
+                        nav_btn("Locations", Icon::Map, GameView::Locations);
+                    });
 
                 // Simulation info
                 ui.ch()
                     .flex_col()
-                    .row_gap(2.0)
-                    .p(Val::Px(8.0))
+                    .row_gap(SPACE_0_5)
+                    .p(Val::Px(SPACE_2))
                     .w_full()
                     .add(|ui| {
                         ui.ch().header("Simulation");
@@ -93,8 +97,8 @@ impl ImmediateAttach<CapsUi> for Sidebar {
                 // Currency and power
                 ui.ch()
                     .flex_col()
-                    .row_gap(2.0)
-                    .p(Val::Px(8.0))
+                    .row_gap(SPACE_0_5)
+                    .p(Val::Px(SPACE_2))
                     .w_full()
                     .add(|ui| {
                         ui.ch().header("Base");
@@ -110,8 +114,8 @@ impl ImmediateAttach<CapsUi> for Sidebar {
                 // Key resources from inventory
                 ui.ch()
                     .flex_col()
-                    .row_gap(2.0)
-                    .p(Val::Px(8.0))
+                    .row_gap(SPACE_0_5)
+                    .p(Val::Px(SPACE_2))
                     .w_full()
                     .add(|ui| {
                         ui.ch().header("Resources");

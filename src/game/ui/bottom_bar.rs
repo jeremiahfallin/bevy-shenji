@@ -23,7 +23,7 @@ impl ImmediateAttach<CapsUi> for BottomBar {
             .h_full()
             .flex_col()
             .justify_end()
-            .p(Val::Px(4.0))
+            .p(Val::Px(SPACE_1))
             .add(|ui| {
                 for (i, notification) in notifications.notifications.iter().enumerate() {
                     let bg_color = match notification.level {
@@ -37,8 +37,8 @@ impl ImmediateAttach<CapsUi> for BottomBar {
 
                     ui.ch_id(format!("notif_{}", i))
                         .style(move |n: &mut Node| {
-                            n.padding = UiRect::axes(Val::Px(10.0), Val::Px(6.0));
-                            n.margin = UiRect::top(Val::Px(2.0));
+                            n.padding = UiRect::axes(Val::Px(SPACE_2_5), Val::Px(SPACE_1_5));
+                            n.margin = UiRect::top(Val::Px(SPACE_0_5));
                             n.border = UiRect::all(Val::Px(1.0));
                         })
                         .bg(bg_color.with_alpha(alpha * 0.9))

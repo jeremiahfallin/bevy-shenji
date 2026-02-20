@@ -174,7 +174,7 @@ impl ImmediateAttach<CapsUi> for ContextMenuOverlay {
                 n.min_width = Val::Px(180.0);
                 n.max_height = Val::Px(400.0);
                 n.flex_direction = FlexDirection::Column;
-                n.padding = UiRect::all(Val::Px(4.0));
+                n.padding = UiRect::all(Val::Px(SPACE_1));
             })
             .bg(GRAY_800)
             .border(1.0)
@@ -256,7 +256,7 @@ fn render_character_menu(
                     .button()
                     .w_full()
                     .style(|n: &mut Node| {
-                        n.padding = UiRect::axes(Val::Px(8.0), Val::Px(4.0));
+                        n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
                     })
                     .on_click_once(
                         move |_: On<Pointer<Click>>,
@@ -283,7 +283,7 @@ fn render_character_menu(
                     .button()
                     .w_full()
                     .style(|n: &mut Node| {
-                        n.padding = UiRect::axes(Val::Px(8.0), Val::Px(4.0));
+                        n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
                     })
                     .on_click_once(
                         move |_: On<Pointer<Click>>,
@@ -318,7 +318,7 @@ fn render_character_menu(
                     .button()
                     .w_full()
                     .style(|n: &mut Node| {
-                        n.padding = UiRect::axes(Val::Px(8.0), Val::Px(4.0));
+                        n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
                     })
                     .on_click_once(
                         move |_: On<Pointer<Click>>,
@@ -353,7 +353,7 @@ fn render_character_menu(
                     .button()
                     .w_full()
                     .style(|n: &mut Node| {
-                        n.padding = UiRect::axes(Val::Px(8.0), Val::Px(4.0));
+                        n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
                     })
                     .on_click_once(
                         move |_: On<Pointer<Click>>,
@@ -388,7 +388,7 @@ fn render_character_menu(
                     .button()
                     .w_full()
                     .style(|n: &mut Node| {
-                        n.padding = UiRect::axes(Val::Px(8.0), Val::Px(4.0));
+                        n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
                     })
                     .on_click_once(
                         move |_: On<Pointer<Click>>,
@@ -417,7 +417,7 @@ fn menu_item_action(ui: &mut Imm<CapsUi>, label: &str, target_entity: Entity, ac
         .button()
         .w_full()
         .style(|n: &mut Node| {
-            n.padding = UiRect::axes(Val::Px(8.0), Val::Px(4.0));
+            n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
         })
         .on_click_once(
             move |_: On<Pointer<Click>>,
@@ -444,7 +444,7 @@ fn menu_item_mode(ui: &mut Imm<CapsUi>, label: &str, target_mode: ContextMenuMod
         .button()
         .w_full()
         .style(|n: &mut Node| {
-            n.padding = UiRect::axes(Val::Px(8.0), Val::Px(4.0));
+            n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
         })
         .on_click_once(
             move |_: On<Pointer<Click>>, mut state: ResMut<ContextMenuState>| {
@@ -466,7 +466,7 @@ fn menu_item_close(ui: &mut Imm<CapsUi>, label: &str) {
         .button()
         .w_full()
         .style(|n: &mut Node| {
-            n.padding = UiRect::axes(Val::Px(8.0), Val::Px(4.0));
+            n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
         })
         .on_click_once(
             |_: On<Pointer<Click>>, mut state: ResMut<ContextMenuState>| {
@@ -488,7 +488,7 @@ fn menu_divider(ui: &mut Imm<CapsUi>) {
             Node {
                 height: Val::Px(1.0),
                 width: Val::Percent(100.0),
-                margin: UiRect::axes(Val::Px(0.0), Val::Px(4.0)),
+                margin: UiRect::axes(Val::Px(SPACE_0), Val::Px(SPACE_1)),
                 ..default()
             },
             BackgroundColor(GRAY_700),

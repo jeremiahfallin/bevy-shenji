@@ -30,12 +30,12 @@ impl ImmediateAttach<CapsUi> for DashboardView {
         ui.ch()
             .flex_col()
             .w_full()
-            .p(Val::Px(10.0))
-            .row_gap(10.0)
+            .p(Val::Px(SPACE_2_5))
+            .row_gap(SPACE_2_5)
             .add(|ui| {
                 // --- Resources Section ---
                 ui.ch().flex_col().w_full().add(|ui| {
-                    ui.ch().label("Resources").font_bold().mb(Val::Px(5.0));
+                    ui.ch().label("Resources").font_bold().mb(Val::Px(SPACE_1));
 
                     if base_inv.items.is_empty() {
                         ui.ch()
@@ -50,7 +50,7 @@ impl ImmediateAttach<CapsUi> for DashboardView {
                                 .flex_row()
                                 .justify_between()
                                 .w_full()
-                                .mb(Val::Px(2.0))
+                                .mb(Val::Px(SPACE_0_5))
                                 .add(|ui| {
                                     ui.ch().label(name).text_color(Color::srgb(0.8, 0.8, 0.8));
                                     ui.ch().label(format!("{}", count)).text_color(Color::WHITE);
@@ -61,7 +61,7 @@ impl ImmediateAttach<CapsUi> for DashboardView {
 
                 // --- Workers Section ---
                 ui.ch().flex_col().w_full().add(|ui| {
-                    ui.ch().label("Workers").font_bold().mb(Val::Px(5.0));
+                    ui.ch().label("Workers").font_bold().mb(Val::Px(SPACE_1));
 
                     let mut active = 0u32;
                     let mut idle = 0u32;
@@ -79,7 +79,7 @@ impl ImmediateAttach<CapsUi> for DashboardView {
 
                 // --- Research Section ---
                 ui.ch().flex_col().w_full().add(|ui| {
-                    ui.ch().label("Research").font_bold().mb(Val::Px(5.0));
+                    ui.ch().label("Research").font_bold().mb(Val::Px(SPACE_1));
 
                     let unlocked_count = research_state.unlocked.len();
                     ui.ch()
@@ -88,7 +88,10 @@ impl ImmediateAttach<CapsUi> for DashboardView {
 
                 // --- Notifications Section ---
                 ui.ch().flex_col().w_full().add(|ui| {
-                    ui.ch().label("Notifications").font_bold().mb(Val::Px(5.0));
+                    ui.ch()
+                        .label("Notifications")
+                        .font_bold()
+                        .mb(Val::Px(SPACE_1));
 
                     let notifs: Vec<_> = notif_state.notifications.iter().rev().take(5).collect();
 
@@ -106,7 +109,7 @@ impl ImmediateAttach<CapsUi> for DashboardView {
                             ui.ch()
                                 .label(&notif.message)
                                 .text_color(color)
-                                .mb(Val::Px(2.0));
+                                .mb(Val::Px(SPACE_0_5));
                         }
                     }
                 });

@@ -53,7 +53,7 @@ impl ImmediateAttach<CapsUi> for NewGameScreen {
 
                 // Scenarios List
                 ui.ch()
-                    .flex_col().w_full().flex_grow().min_h(Val::Px(0.0)).gap(40.0).p(Val::Px(10.0)) // scenario-list styles
+                    .flex_col().w_full().flex_grow().min_h(Val::Px(0.0)).gap(SPACE_10).p(Val::Px(SPACE_2_5)) // scenario-list styles
                     .add(|ui| {
                         ui.ch().scrollarea(
                             |n| {
@@ -61,7 +61,7 @@ impl ImmediateAttach<CapsUi> for NewGameScreen {
                                 n.flex_grow = 1.0;
                                 n.flex_direction = FlexDirection::Column;
                                 n.align_items = AlignItems::Center;
-                                n.row_gap = Val::Px(10.0);
+                                n.row_gap = Val::Px(SPACE_2_5);
                                 n.overflow = Overflow {
                                     y: OverflowAxis::Scroll,
                                     ..default()
@@ -79,7 +79,7 @@ impl ImmediateAttach<CapsUi> for NewGameScreen {
 
                                     // Stats Row
                                     ui.ch()
-                                        .flex_row().gap(30.0).my(Val::Px(10.0)) // horizontal
+                                        .flex_row().gap(SPACE_8).my(Val::Px(SPACE_2_5)) // horizontal
                                         .add(|ui| {
                                             ui.ch().label(format!(
                                                     "Gold: {}",

@@ -43,7 +43,7 @@ impl ImmediateAttach<CapsUi> for Content {
 
     fn construct(ui: &mut Imm<CapsUi>, ui_state: &mut Res<UiState>) {
         let active = ui_state.active_view;
-        ui.ch().w_full().h_full().p(Val::Px(20.0)).add(|ui| {
+        ui.ch().w_full().h_full().p(Val::Px(SPACE_5)).add(|ui| {
             // Render all views every frame but hide inactive ones via Display::None.
             // This keeps entities alive across view switches, preventing flicker
             // from entity destruction/recreation.
