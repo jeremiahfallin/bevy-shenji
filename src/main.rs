@@ -3,6 +3,7 @@
 // Disable console on Windows for non-dev builds.
 #![cfg_attr(not(feature = "dev"), windows_subsystem = "windows")]
 
+mod app_caps;
 mod asset_tracking;
 mod audio;
 #[cfg(feature = "dev")]
@@ -12,7 +13,7 @@ mod menus;
 mod screens;
 mod theme;
 
-use crate::theme::components::ShenjiCaps;
+use crate::app_caps::AppCaps;
 use crate::theme::prelude::*;
 use bevy::{asset::AssetMetaCheck, prelude::*};
 
@@ -46,7 +47,7 @@ impl Plugin for AppPlugin {
                     ..default()
                 }),
         )
-        .add_plugins(BevyImmediatePlugin::<ShenjiCaps>::default());
+        .add_plugins(BevyImmediatePlugin::<AppCaps>::default());
 
         // Add other plugins.
         app.add_plugins((
@@ -94,7 +95,10 @@ impl Plugin for AppPlugin {
                 Name::new("UiRoot"),
             ))
             .id();
-        app.insert_resource(theme::UiRoot(root));
+        app.insert_resource(UiRoot(root));
+
+        // Configure theme interaction sounds.
+        app.add_systems(Startup, configure_theme_sounds);
 
         // Spawn the main camera.
         app.add_systems(Startup, spawn_camera);
@@ -121,6 +125,15 @@ struct Pause(pub bool);
 /// A system set for systems that shouldn't run while the game is paused.
 #[derive(SystemSet, Copy, Clone, Eq, PartialEq, Hash, Debug)]
 struct PausableSystems;
+
+/// The root UI entity that all screens attach their UI to.
+#[derive(Resource)]
+pub struct UiRoot(pub Entity);
+
+fn configure_theme_sounds(asset_server: Res<AssetServer>, mut theme_config: ResMut<ThemeConfig>) {
+    theme_config.hover_sound = Some(asset_server.load("audio/sound_effects/button_hover.ogg"));
+    theme_config.click_sound = Some(asset_server.load("audio/sound_effects/button_click.ogg"));
+}
 
 fn spawn_camera(mut commands: Commands) {
     commands.spawn((Name::new("Camera"), Camera2d));

@@ -1,5 +1,4 @@
 pub mod caps;
-pub use caps::*;
 
 pub mod scroll_view;
 pub use scroll_view::*;

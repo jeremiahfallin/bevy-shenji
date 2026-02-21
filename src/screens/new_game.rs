@@ -20,7 +20,8 @@ use crate::{
         simulation::SimulationState,
     },
     screens::Screen,
-    theme::{UiRoot, prelude::*, scroll::ImmUiScrollExt},
+    UiRoot,
+    theme::{prelude::*, scroll::ImmUiScrollExt},
 };
 
 pub(super) fn plugin(app: &mut App) {
