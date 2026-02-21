@@ -16,7 +16,8 @@ use crate::{
     game::ui::spawn_game_layout,
     menus::Menu,
     screens::Screen,
-    theme::{UiRoot, prelude::*},
+    UiRoot,
+    theme::prelude::*,
 };
 
 pub(super) fn plugin(app: &mut App) {

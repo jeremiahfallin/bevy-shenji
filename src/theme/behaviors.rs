@@ -4,34 +4,34 @@ use std::marker::PhantomData;
 
 use crate::theme::resources::LucideAssets;
 use crate::theme::widgets::icon::LucideIcon;
-use crate::{asset_tracking::LoadResource, audio::sound_effect};
 
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<LucideAssets>();
-    app.load_resource::<InteractionAssets>();
+    app.init_resource::<ThemeConfig>();
     app.add_observer(play_on_hover_sound_effect);
     app.add_observer(play_on_click_sound_effect);
     app.add_observer(apply_lucide_font);
     app.add_systems(PostUpdate, enforce_lucide_font);
 }
 
-#[derive(Resource, Asset, Clone, Reflect)]
-#[reflect(Resource)]
-struct InteractionAssets {
-    #[dependency]
-    hover: Handle<AudioSource>,
-    #[dependency]
-    click: Handle<AudioSource>,
-}
-
-impl FromWorld for InteractionAssets {
-    fn from_world(world: &mut World) -> Self {
-        let assets = world.resource::<AssetServer>();
-        Self {
-            hover: assets.load("audio/sound_effects/button_hover.ogg"),
-            click: assets.load("audio/sound_effects/button_click.ogg"),
-        }
-    }
+/// Configuration resource for the theme system.
+///
+/// Games should insert this resource to configure interaction sounds.
+/// If no sounds are configured, sound effects are silently skipped.
+///
+/// # Example
+/// ```rust,no_run
+/// app.insert_resource(ThemeConfig {
+///     hover_sound: Some(assets.load("audio/hover.ogg")),
+///     click_sound: Some(assets.load("audio/click.ogg")),
+/// });
+/// ```
+#[derive(Resource, Default, Clone)]
+pub struct ThemeConfig {
+    /// Sound to play when a UI element with `Interaction` is hovered.
+    pub hover_sound: Option<Handle<AudioSource>>,
+    /// Sound to play when a UI element with `Interaction` is clicked.
+    pub click_sound: Option<Handle<AudioSource>>,
 }
 
 #[derive(Component)]
@@ -45,7 +45,9 @@ impl<T: Send + Sync + 'static> Default for ObserverMarker<T> {
 
 pub struct PrimaryClick;
 pub struct SecondaryClick;
-pub struct HoverSound;
+pub struct HoverIn;
+pub struct HoverOut;
+pub struct RightClick;
 
 pub struct CapabilityObserver;
 
@@ -58,35 +60,46 @@ pub trait ImmUiInteractionExt {
         self,
         system: impl IntoObserverSystem<Pointer<Click>, (), M>,
     ) -> Self;
+
+    /// Register a handler for right-click (secondary button).
+    fn on_right_click<M>(self, system: impl IntoObserverSystem<Pointer<Click>, (), M>) -> Self;
+
+    /// Register a handler for pointer entering this entity.
+    fn on_hover<M>(self, system: impl IntoObserverSystem<Pointer<Over>, (), M>) -> Self;
+
+    /// Register a handler for pointer leaving this entity.
+    fn on_hover_end<M>(self, system: impl IntoObserverSystem<Pointer<Out>, (), M>) -> Self;
 }
 
 fn play_on_hover_sound_effect(
     trigger: On<Pointer<Over>>,
     mut commands: Commands,
-    interaction_assets: Option<Res<InteractionAssets>>,
+    theme_config: Res<ThemeConfig>,
     interaction_query: Query<(), With<Interaction>>,
 ) {
-    let Some(interaction_assets) = interaction_assets else {
-        return;
-    };
-
-    if interaction_query.contains(trigger.entity) {
-        commands.spawn(sound_effect(interaction_assets.hover.clone()));
+    if let Some(ref sound) = theme_config.hover_sound {
+        if interaction_query.contains(trigger.entity) {
+            commands.spawn((
+                AudioPlayer(sound.clone()),
+                PlaybackSettings::DESPAWN,
+            ));
+        }
     }
 }
 
 fn play_on_click_sound_effect(
     trigger: On<Pointer<Click>>,
     mut commands: Commands,
-    interaction_assets: Option<Res<InteractionAssets>>,
+    theme_config: Res<ThemeConfig>,
     interaction_query: Query<(), With<Interaction>>,
 ) {
-    let Some(interaction_assets) = interaction_assets else {
-        return;
-    };
-
-    if interaction_query.contains(trigger.entity) {
-        commands.spawn(sound_effect(interaction_assets.click.clone()));
+    if let Some(ref sound) = theme_config.click_sound {
+        if interaction_query.contains(trigger.entity) {
+            commands.spawn((
+                AudioPlayer(sound.clone()),
+                PlaybackSettings::DESPAWN,
+            ));
+        }
     }
 }
 
@@ -116,6 +129,54 @@ where
     // default implementation forwards to the "Primary" tag
     fn on_click_once<M>(self, system: impl IntoObserverSystem<Pointer<Click>, (), M>) -> Self {
         self.on_click_tagged::<PrimaryClick, _>(system)
+    }
+
+    fn on_right_click<M>(
+        mut self,
+        system: impl IntoObserverSystem<Pointer<Click>, (), M>,
+    ) -> Self {
+        let has_marker = self
+            .cap_get_component::<ObserverMarker<RightClick>>()
+            .ok()
+            .flatten()
+            .is_some();
+
+        if !has_marker {
+            self.entity_commands()
+                .insert(ObserverMarker::<RightClick>::default())
+                .observe(system);
+        }
+        self
+    }
+
+    fn on_hover<M>(mut self, system: impl IntoObserverSystem<Pointer<Over>, (), M>) -> Self {
+        let has_marker = self
+            .cap_get_component::<ObserverMarker<HoverIn>>()
+            .ok()
+            .flatten()
+            .is_some();
+
+        if !has_marker {
+            self.entity_commands()
+                .insert(ObserverMarker::<HoverIn>::default())
+                .observe(system);
+        }
+        self
+    }
+
+    fn on_hover_end<M>(mut self, system: impl IntoObserverSystem<Pointer<Out>, (), M>) -> Self {
+        let has_marker = self
+            .cap_get_component::<ObserverMarker<HoverOut>>()
+            .ok()
+            .flatten()
+            .is_some();
+
+        if !has_marker {
+            self.entity_commands()
+                .insert(ObserverMarker::<HoverOut>::default())
+                .observe(system);
+        }
+        self
     }
 }
 

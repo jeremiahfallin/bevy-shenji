@@ -9,7 +9,8 @@ use bevy_immediate::{
 use crate::{
     asset_tracking::ResourceHandles,
     screens::Screen,
-    theme::{UiRoot, prelude::*},
+    UiRoot,
+    theme::prelude::*,
 };
 
 pub(super) fn plugin(app: &mut App) {

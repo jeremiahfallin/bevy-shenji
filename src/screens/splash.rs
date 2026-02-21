@@ -13,7 +13,8 @@ use bevy_immediate::{
 use crate::{
     AppSystems,
     screens::Screen,
-    theme::{UiRoot, prelude::*},
+    UiRoot,
+    theme::prelude::*,
 };
 
 pub(super) fn plugin(app: &mut App) {

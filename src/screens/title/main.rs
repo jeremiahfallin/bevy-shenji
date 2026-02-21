@@ -13,7 +13,8 @@ use crate::{
     game::save::LoadGameMessage,
     menus::Menu,
     screens::Screen,
-    theme::{UiRoot, prelude::*},
+    UiRoot,
+    theme::prelude::*,
 };
 
 use crate::screens::loading::TargetScreen;

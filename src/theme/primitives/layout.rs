@@ -80,6 +80,36 @@ pub trait ImmUiLayout {
     fn scroll_y(self) -> Self;
     fn scroll_x(self) -> Self;
     fn grid_template_columns(self, tracks: Vec<RepeatedGridTrack>) -> Self;
+
+    // Overflow
+    fn overflow_hidden(self) -> Self;
+    fn overflow_clip(self) -> Self;
+    fn overflow_visible(self) -> Self;
+    fn overflow_x_hidden(self) -> Self;
+    fn overflow_y_hidden(self) -> Self;
+    fn overflow_x_visible(self) -> Self;
+    fn overflow_y_visible(self) -> Self;
+
+    // Aspect Ratio
+    fn aspect_ratio(self, ratio: f32) -> Self;
+    fn aspect_square(self) -> Self;
+    fn aspect_video(self) -> Self;
+
+    // Max sizing
+    fn max_w(self, val: impl Into<Val>) -> Self;
+    fn max_h(self, val: impl Into<Val>) -> Self;
+
+    // Position offsets
+    fn top(self, val: impl Into<Val>) -> Self;
+    fn bottom(self, val: impl Into<Val>) -> Self;
+    fn left(self, val: impl Into<Val>) -> Self;
+    fn right(self, val: impl Into<Val>) -> Self;
+
+    // Align self
+    fn self_center(self) -> Self;
+    fn self_start(self) -> Self;
+    fn self_end(self) -> Self;
+    fn self_stretch(self) -> Self;
 }
 
 impl<Cap> ImmUiLayout for ImmEntity<'_, '_, '_, Cap>
@@ -305,5 +335,84 @@ where
 
     fn grid_template_columns(self, tracks: Vec<RepeatedGridTrack>) -> Self {
         self.style(move |s| s.grid_template_columns = tracks)
+    }
+
+    // --- Overflow ---
+    fn overflow_hidden(self) -> Self {
+        self.style(|s| {
+            s.overflow.x = OverflowAxis::Hidden;
+            s.overflow.y = OverflowAxis::Hidden;
+        })
+    }
+    fn overflow_clip(self) -> Self {
+        self.style(|s| {
+            s.overflow.x = OverflowAxis::Clip;
+            s.overflow.y = OverflowAxis::Clip;
+        })
+    }
+    fn overflow_visible(self) -> Self {
+        self.style(|s| {
+            s.overflow.x = OverflowAxis::Visible;
+            s.overflow.y = OverflowAxis::Visible;
+        })
+    }
+    fn overflow_x_hidden(self) -> Self {
+        self.style(|s| s.overflow.x = OverflowAxis::Hidden)
+    }
+    fn overflow_y_hidden(self) -> Self {
+        self.style(|s| s.overflow.y = OverflowAxis::Hidden)
+    }
+    fn overflow_x_visible(self) -> Self {
+        self.style(|s| s.overflow.x = OverflowAxis::Visible)
+    }
+    fn overflow_y_visible(self) -> Self {
+        self.style(|s| s.overflow.y = OverflowAxis::Visible)
+    }
+
+    // --- Aspect Ratio ---
+    fn aspect_ratio(self, ratio: f32) -> Self {
+        self.style(move |s| s.aspect_ratio = Some(ratio))
+    }
+    fn aspect_square(self) -> Self {
+        self.aspect_ratio(1.0)
+    }
+    fn aspect_video(self) -> Self {
+        self.aspect_ratio(16.0 / 9.0)
+    }
+
+    // --- Max Sizing ---
+    fn max_w(self, val: impl Into<Val>) -> Self {
+        self.style(|s| s.max_width = val.into())
+    }
+    fn max_h(self, val: impl Into<Val>) -> Self {
+        self.style(|s| s.max_height = val.into())
+    }
+
+    // --- Position Offsets ---
+    fn top(self, val: impl Into<Val>) -> Self {
+        self.style(|s| s.top = val.into())
+    }
+    fn bottom(self, val: impl Into<Val>) -> Self {
+        self.style(|s| s.bottom = val.into())
+    }
+    fn left(self, val: impl Into<Val>) -> Self {
+        self.style(|s| s.left = val.into())
+    }
+    fn right(self, val: impl Into<Val>) -> Self {
+        self.style(|s| s.right = val.into())
+    }
+
+    // --- Align Self ---
+    fn self_center(self) -> Self {
+        self.style(|s| s.align_self = AlignSelf::Center)
+    }
+    fn self_start(self) -> Self {
+        self.style(|s| s.align_self = AlignSelf::FlexStart)
+    }
+    fn self_end(self) -> Self {
+        self.style(|s| s.align_self = AlignSelf::FlexEnd)
+    }
+    fn self_stretch(self) -> Self {
+        self.style(|s| s.align_self = AlignSelf::Stretch)
     }
 }
