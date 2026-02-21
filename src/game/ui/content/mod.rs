@@ -9,12 +9,14 @@ use crate::game::resources::{GameView, UiState};
 use crate::game::ui::inspector::{CharacterInspector, InspectorState};
 use crate::theme::prelude::*;
 
+pub mod buildings;
 pub mod characters;
 pub mod dashboard;
 pub mod locations;
 pub mod research;
 pub mod squads;
 
+pub use buildings::*;
 pub use characters::*;
 pub use dashboard::*;
 pub use locations::*;
@@ -31,6 +33,7 @@ pub(super) fn plugin(app: &mut App) {
         BevyImmediateAttachPlugin::<CapsUi, CharactersView>::new(),
         BevyImmediateAttachPlugin::<CapsUi, SquadsView>::new(),
         BevyImmediateAttachPlugin::<CapsUi, LocationsView>::new(),
+        BevyImmediateAttachPlugin::<CapsUi, BuildingsView>::new(),
     ));
 }
 
@@ -83,6 +86,10 @@ impl ImmediateAttach<CapsUi> for Content {
             ui.ch_id("view_locations")
                 .style(view_style(active == GameView::Locations))
                 .on_spawn_insert(|| LocationsView);
+
+            ui.ch_id("view_buildings")
+                .style(view_style(active == GameView::Buildings))
+                .on_spawn_insert(|| BuildingsView);
         });
     }
 }
