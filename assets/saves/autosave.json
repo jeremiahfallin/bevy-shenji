@@ -1,9 +1,6 @@
 {
   "game_state": {
-    "current_level": 1,
-    "game_time": 0.0,
-    "is_paused": false,
-    "game_days": 0
+    "current_level": 1
   },
   "player_state": {
     "gold": 1000,
@@ -12,8 +9,8 @@
   },
   "squad_state": {
     "characters": {
-      "char_2": 4294966824,
-      "char_1": 4294966825
+      "char_2": 17179869099,
+      "char_1": 17179869101
     },
     "squads": {
       "1": {
@@ -31,25 +28,59 @@
     "next_id": 3,
     "next_squad_id": 1
   },
-  "base_state": null,
+  "base_state": {
+    "value": {
+      "zeni": 1000,
+      "land": 10,
+      "tatami": 10,
+      "research_level": 0,
+      "tech_level": 0
+    },
+    "power": {
+      "generation": 0,
+      "consumption": 0,
+      "capacity": 100,
+      "current": 0
+    }
+  },
+  "research_state": {
+    "unlocked": [],
+    "current_research": null,
+    "research_progress": 0
+  },
+  "simulation_state": {
+    "game_time": 110,
+    "game_days": 0,
+    "ticks_per_day": 600,
+    "speed": 1,
+    "previous_speed": 1
+  },
+  "base_inventory": {
+    "items": {
+      "bread": 20,
+      "zeni": 1000,
+      "lumber": 10,
+      "books": 5,
+      "stone": 10
+    }
+  },
   "characters": [
     {
       "info": {
         "id": "char_1",
         "name": "Leader",
         "race": "Human",
-        "subrace": "Northerner",
-        "location": "Home Base"
+        "subrace": "Northerner"
       },
       "health": {
-        "head": 0,
-        "stomach": 0,
-        "chest": 0,
-        "left_arm": 0,
-        "right_arm": 0,
-        "left_leg": 0,
-        "right_leg": 0,
-        "hunger": 0
+        "head": 100,
+        "stomach": 100,
+        "chest": 100,
+        "left_arm": 100,
+        "right_arm": 100,
+        "left_leg": 100,
+        "right_leg": 100,
+        "hunger": 89
       },
       "skills": {
         "armor_smith": 0,
@@ -96,25 +127,39 @@
       "inventory": {
         "items": {}
       },
-      "squad": 0
+      "squad": 1,
+      "action_state": {
+        "current_action": "Idle",
+        "progress": {
+          "current": 0,
+          "required": 0
+        },
+        "action_queue": [
+          "Explore"
+        ],
+        "job_queue": [],
+        "current_job_index": 0
+      },
+      "character_location": {
+        "location_id": "base"
+      }
     },
     {
       "info": {
         "id": "char_2",
         "name": "Warrior",
         "race": "Skeleton",
-        "subrace": "Worker",
-        "location": "Home Base"
+        "subrace": "Worker"
       },
       "health": {
-        "head": 0,
-        "stomach": 0,
-        "chest": 0,
-        "left_arm": 0,
-        "right_arm": 0,
-        "left_leg": 0,
-        "right_leg": 0,
-        "hunger": 0
+        "head": 100,
+        "stomach": 100,
+        "chest": 100,
+        "left_arm": 100,
+        "right_arm": 100,
+        "left_leg": 100,
+        "right_leg": 100,
+        "hunger": 89
       },
       "skills": {
         "armor_smith": 0,
@@ -161,7 +206,111 @@
       "inventory": {
         "items": {}
       },
-      "squad": 0
+      "squad": 1,
+      "action_state": {
+        "current_action": "Idle",
+        "progress": {
+          "current": 0,
+          "required": 0
+        },
+        "action_queue": [],
+        "job_queue": [],
+        "current_job_index": 0
+      },
+      "character_location": {
+        "location_id": "base"
+      }
     }
-  ]
+  ],
+  "buildings": [],
+  "locations": [
+    {
+      "id": "base",
+      "name": "Home Base",
+      "loc_type": "Base",
+      "distance": 0,
+      "discovered": true,
+      "resource_type": "",
+      "capacity": 0,
+      "yield_rate": 0,
+      "current_amount": 0,
+      "inventory": {}
+    },
+    {
+      "id": "stone_quarry",
+      "name": "Stone Quarry",
+      "loc_type": "Mine",
+      "distance": 20,
+      "discovered": true,
+      "resource_type": "stone",
+      "capacity": 1000,
+      "yield_rate": 2,
+      "current_amount": 1000,
+      "inventory": {}
+    },
+    {
+      "id": "forest",
+      "name": "Forest",
+      "loc_type": "Forest",
+      "distance": 15,
+      "discovered": true,
+      "resource_type": "lumber",
+      "capacity": 800,
+      "yield_rate": 2,
+      "current_amount": 800,
+      "inventory": {}
+    },
+    {
+      "id": "copper_mine",
+      "name": "Copper Mine",
+      "loc_type": "Mine",
+      "distance": 30,
+      "discovered": false,
+      "resource_type": "copper_ore",
+      "capacity": 500,
+      "yield_rate": 1,
+      "current_amount": 500,
+      "inventory": {}
+    },
+    {
+      "id": "iron_mine",
+      "name": "Iron Mine",
+      "loc_type": "Mine",
+      "distance": 45,
+      "discovered": false,
+      "resource_type": "iron_ore",
+      "capacity": 300,
+      "yield_rate": 1,
+      "current_amount": 300,
+      "inventory": {}
+    },
+    {
+      "id": "ancient_ruins",
+      "name": "Ancient Ruins",
+      "loc_type": "Ruins",
+      "distance": 60,
+      "discovered": false,
+      "resource_type": "books",
+      "capacity": 100,
+      "yield_rate": 1,
+      "current_amount": 100,
+      "inventory": {}
+    },
+    {
+      "id": "trading_post",
+      "name": "Trading Post",
+      "loc_type": "City",
+      "distance": 40,
+      "discovered": false,
+      "resource_type": "",
+      "capacity": 0,
+      "yield_rate": 0,
+      "current_amount": 0,
+      "inventory": {}
+    }
+  ],
+  "exploration_state": {
+    "total_explorations": 0,
+    "generated_nodes": {}
+  }
 }
