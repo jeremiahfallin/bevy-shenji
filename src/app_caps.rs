@@ -10,7 +10,7 @@ use bevy_immediate::ui::base::CapabilityUiBase;
 use bevy_immediate::ui::interaction::CapabilityUiInteraction;
 use bevy_immediate::ui::look::CapabilityUiLook;
 use bevy_immediate::ui::text::CapabilityUiText;
-use bevy_immediate::{CapSet, ImmCapAccessRequests, ImplCap};
+use bevy_immediate::{CapSet, ImmCapAccessRequests, ImmCapability, ImplCap};
 
 use crate::theme::behaviors::CapabilityObserver;
 use crate::theme::primitives::image::CapabilityUiImage;
@@ -27,7 +27,21 @@ use crate::theme::widgets::button::CapabilityButton;
 pub struct AppCaps;
 
 impl CapSet for AppCaps {
-    fn initialize<T: CapSet>(_app: &mut App, _cap_req: &mut ImmCapAccessRequests<T>) {}
+    fn initialize<T: CapSet>(app: &mut App, cap_req: &mut ImmCapAccessRequests<T>) {
+        // bevy_immediate core capabilities
+        CapabilityUiBase::build(app, cap_req);
+        CapabilityUiText::build(app, cap_req);
+        CapabilityUiInteraction::build(app, cap_req);
+        CapabilityUiLook::build(app, cap_req);
+
+        // Theme extension capabilities
+        CapabilityUiLayout::build(app, cap_req);
+        CapabilityUiTextStyle::build(app, cap_req);
+        CapabilityUiVisuals::build(app, cap_req);
+        CapabilityButton::build(app, cap_req);
+        CapabilityObserver::build(app, cap_req);
+        CapabilityUiImage::build(app, cap_req);
+    }
 }
 
 // bevy_immediate core capabilities
