@@ -1045,7 +1045,10 @@ fn render_event_log_sidebar(
                         .text_color(TEXT_PRIMARY);
                 });
 
-            // Scrollable timeline
+            // Scrollable timeline — use Display::None to prevent
+            // entity reuse between empty/populated states.
+            let has_entries = !event_log.entries.is_empty();
+
             ui.ch().flex_1().scrollarea(
                 |n| {
                     n.flex_direction = FlexDirection::Column;
@@ -1053,17 +1056,39 @@ fn render_event_log_sidebar(
                     n.row_gap = Val::Px(SPACE_4);
                 },
                 |ui| {
-                    if event_log.entries.is_empty() {
-                        ui.ch()
-                            .label("No events yet")
-                            .text_size(TEXT_XS)
-                            .text_color(TEXT_MUTED);
-                        return;
-                    }
+                    // Empty state
+                    ui.ch_id("log_empty")
+                        .style(move |n: &mut Node| {
+                            n.display = if !has_entries {
+                                Display::Flex
+                            } else {
+                                Display::None
+                            };
+                        })
+                        .add(|ui| {
+                            ui.ch()
+                                .label("No events yet")
+                                .text_size(TEXT_XS)
+                                .text_color(TEXT_MUTED);
+                        });
 
-                    for entry in &event_log.entries {
-                        render_event_log_entry(ui, entry, sim_state);
-                    }
+                    // Entries
+                    ui.ch_id("log_entries")
+                        .flex_col()
+                        .w_full()
+                        .row_gap(SPACE_4)
+                        .style(move |n: &mut Node| {
+                            n.display = if has_entries {
+                                Display::Flex
+                            } else {
+                                Display::None
+                            };
+                        })
+                        .add(|ui| {
+                            for entry in &event_log.entries {
+                                render_event_log_entry(ui, entry, sim_state);
+                            }
+                        });
                 },
             );
         });
