@@ -119,10 +119,7 @@ impl ImmediateAttach<CapsUi> for LocationsView {
 
                         if !exploring.is_empty() {
                             ui.ch()
-                                .label(format!(
-                                    "Exploring: {}",
-                                    exploring.join(", ")
-                                ))
+                                .label(format!("Exploring: {}", exploring.join(", ")))
                                 .text_size(11.0)
                                 .text_color(Color::srgb(0.4, 0.7, 0.9))
                                 .mb(Val::Px(SPACE_1));
@@ -166,17 +163,14 @@ impl ImmediateAttach<CapsUi> for LocationsView {
                                             .button()
                                             .on_click_once(
                                                 move |_: On<Pointer<Click>>,
-                                                      mut action_query: Query<
-                                                    &mut ActionState,
-                                                >,
+                                                      mut action_query: Query<&mut ActionState>,
                                                       mut notifications: ResMut<
                                                     NotificationState,
                                                 >| {
                                                     if let Ok(mut action_state) =
                                                         action_query.get_mut(entity)
                                                     {
-                                                        action_state
-                                                            .queue_action(Action::Explore);
+                                                        action_state.queue_action(Action::Explore);
                                                         notifications.push(
                                                             format!(
                                                                 "{} sent to explore!",
@@ -291,10 +285,7 @@ impl ImmediateAttach<CapsUi> for LocationsView {
 
                             if !chars_here.is_empty() {
                                 ui.ch()
-                                    .label(format!(
-                                        "Characters: {}",
-                                        chars_here.join(", ")
-                                    ))
+                                    .label(format!("Characters: {}", chars_here.join(", ")))
                                     .text_color(Color::srgb(0.5, 0.8, 0.5));
                             }
                         });

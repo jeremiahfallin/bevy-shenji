@@ -68,7 +68,8 @@ where
         // Checkbox box
         let is_checked = checked;
         self.add(move |ui| {
-            let mut box_entity = ui.ch_id("checkbox_box")
+            let mut box_entity = ui
+                .ch_id("checkbox_box")
                 .style(|s| {
                     s.width = Val::Px(18.0);
                     s.height = Val::Px(18.0);
@@ -80,9 +81,7 @@ where
                 .rounded(4.0);
 
             if is_checked {
-                box_entity = box_entity
-                    .bg(PRIMARY_500)
-                    .border_color(PRIMARY_500);
+                box_entity = box_entity.bg(PRIMARY_500).border_color(PRIMARY_500);
 
                 // Checkmark icon
                 box_entity.add(|ui| {
@@ -92,9 +91,7 @@ where
                         .text_color(Color::WHITE);
                 });
             } else {
-                box_entity
-                    .bg(TRANSPARENT)
-                    .border_color(GRAY_700);
+                box_entity.bg(TRANSPARENT).border_color(GRAY_700);
             }
         })
     }
@@ -167,10 +164,7 @@ where
     fn toggle_label(self, text: impl Into<String>) -> Self {
         let t = text.into();
         self.add(move |ui| {
-            ui.ch_id("toggle_label")
-                .label(t)
-                .text_sm()
-                .color(GRAY_100);
+            ui.ch_id("toggle_label").label(t).text_sm().color(GRAY_100);
         })
     }
 }

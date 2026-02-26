@@ -6,12 +6,7 @@ use bevy_immediate::{
     ui::CapsUi,
 };
 
-use crate::{
-    asset_tracking::ResourceHandles,
-    screens::Screen,
-    UiRoot,
-    theme::prelude::*,
-};
+use crate::{UiRoot, asset_tracking::ResourceHandles, screens::Screen, theme::prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins(BevyImmediateAttachPlugin::<CapsUi, LoadingScreen>::new());

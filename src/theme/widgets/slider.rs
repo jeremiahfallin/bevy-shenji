@@ -1,7 +1,7 @@
 use bevy::prelude::*;
+use bevy::ui_widgets::{SliderRange, SliderThumb, SliderValue};
 use bevy_immediate::ui::text::CapabilityUiText;
 use bevy_immediate::{CapSet, ImmEntity, ImplCap};
-use bevy::ui_widgets::{SliderRange, SliderThumb, SliderValue};
 
 use crate::theme::prelude::*;
 

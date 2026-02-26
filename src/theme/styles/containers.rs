@@ -39,9 +39,7 @@ where
 // ── Card variants ──────────────────────────────────────────────────────────
 
 /// Standard card — raised surface with padding and rounding.
-pub fn style_card<'w, 's, 'a, Cap>(
-    entity: ImmEntity<'w, 's, 'a, Cap>,
-) -> ImmEntity<'w, 's, 'a, Cap>
+pub fn style_card<'w, 's, 'a, Cap>(entity: ImmEntity<'w, 's, 'a, Cap>) -> ImmEntity<'w, 's, 'a, Cap>
 where
     Cap: CapSet + ImplCap<CapabilityUiVisuals> + ImplCap<CapabilityUiLayout>,
 {
@@ -159,9 +157,7 @@ where
 // ── Well / inset containers ────────────────────────────────────────────────
 
 /// Inset well — for grouped form fields or embedded content.
-pub fn style_well<'w, 's, 'a, Cap>(
-    entity: ImmEntity<'w, 's, 'a, Cap>,
-) -> ImmEntity<'w, 's, 'a, Cap>
+pub fn style_well<'w, 's, 'a, Cap>(entity: ImmEntity<'w, 's, 'a, Cap>) -> ImmEntity<'w, 's, 'a, Cap>
 where
     Cap: CapSet + ImplCap<CapabilityUiVisuals> + ImplCap<CapabilityUiLayout>,
 {

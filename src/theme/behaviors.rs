@@ -37,9 +37,10 @@ pub(super) fn plugin(app: &mut App) {
 fn register_observer_access_for_caps_ui(app: &mut App) {
     let world = app.world_mut();
 
-    let Some(mut resource) = world.remove_resource::<ImmCapAccessRequestsResource<CapsUi>>()
-    else {
-        warn!("ImmCapAccessRequestsResource<CapsUi> not found; ObserverMarker access won't be registered. Ensure theme::plugin runs after plugins that add BevyImmediateAttachPlugin::<CapsUi, _>.");
+    let Some(mut resource) = world.remove_resource::<ImmCapAccessRequestsResource<CapsUi>>() else {
+        warn!(
+            "ImmCapAccessRequestsResource<CapsUi> not found; ObserverMarker access won't be registered. Ensure theme::plugin runs after plugins that add BevyImmediateAttachPlugin::<CapsUi, _>."
+        );
         return;
     };
 
@@ -50,7 +51,9 @@ fn register_observer_access_for_caps_ui(app: &mut App) {
         capabilities.request_component_read::<ObserverMarker<HoverIn>>(world);
         capabilities.request_component_read::<ObserverMarker<HoverOut>>(world);
     } else {
-        warn!("Could not get mutable access to CapsUi capabilities Arc; ObserverMarker access won't be registered.");
+        warn!(
+            "Could not get mutable access to CapsUi capabilities Arc; ObserverMarker access won't be registered."
+        );
     }
 
     world.insert_resource(resource);
@@ -131,10 +134,7 @@ fn play_on_hover_sound_effect(
 ) {
     if let Some(ref sound) = theme_config.hover_sound {
         if interaction_query.contains(trigger.entity) {
-            commands.spawn((
-                AudioPlayer(sound.clone()),
-                PlaybackSettings::DESPAWN,
-            ));
+            commands.spawn((AudioPlayer(sound.clone()), PlaybackSettings::DESPAWN));
         }
     }
 }
@@ -147,10 +147,7 @@ fn play_on_click_sound_effect(
 ) {
     if let Some(ref sound) = theme_config.click_sound {
         if interaction_query.contains(trigger.entity) {
-            commands.spawn((
-                AudioPlayer(sound.clone()),
-                PlaybackSettings::DESPAWN,
-            ));
+            commands.spawn((AudioPlayer(sound.clone()), PlaybackSettings::DESPAWN));
         }
     }
 }
@@ -183,10 +180,7 @@ where
         self.on_click_tagged::<PrimaryClick, _>(system)
     }
 
-    fn on_right_click<M>(
-        mut self,
-        system: impl IntoObserverSystem<Pointer<Click>, (), M>,
-    ) -> Self {
+    fn on_right_click<M>(mut self, system: impl IntoObserverSystem<Pointer<Click>, (), M>) -> Self {
         let has_marker = self
             .cap_get_component::<ObserverMarker<RightClick>>()
             .ok()

@@ -11,13 +11,8 @@ use bevy_immediate::{
 };
 
 use crate::{
-    Pause,
-    game::simulation::SimulationState,
-    game::ui::spawn_game_layout,
-    menus::Menu,
-    screens::Screen,
-    UiRoot,
-    theme::prelude::*,
+    Pause, UiRoot, game::simulation::SimulationState, game::ui::spawn_game_layout, menus::Menu,
+    screens::Screen, theme::prelude::*,
 };
 
 pub(super) fn plugin(app: &mut App) {

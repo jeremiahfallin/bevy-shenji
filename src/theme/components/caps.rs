@@ -5,8 +5,8 @@
 //! The application-specific aggregate `CapSet` (e.g., `AppCaps`) is
 //! defined outside the theme — see `src/app_caps.rs`.
 
-use bevy_immediate::ui::CapsUi;
 use bevy_immediate::ImplCap;
+use bevy_immediate::ui::CapsUi;
 
 use crate::theme::behaviors::CapabilityObserver;
 

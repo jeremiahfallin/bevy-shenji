@@ -6,9 +6,7 @@ use bevy_immediate::{CapSet, ImmEntity, ImplCap};
 // ── Shared button base ─────────────────────────────────────────────────────
 
 /// Common button layout shared by all variants.
-fn style_btn_base<'w, 's, 'a, Cap>(
-    entity: ImmEntity<'w, 's, 'a, Cap>,
-) -> ImmEntity<'w, 's, 'a, Cap>
+fn style_btn_base<'w, 's, 'a, Cap>(entity: ImmEntity<'w, 's, 'a, Cap>) -> ImmEntity<'w, 's, 'a, Cap>
 where
     Cap: CapSet
         + ImplCap<CapabilityUiVisuals>
@@ -65,9 +63,7 @@ where
         + ImplCap<CapabilityUiLayout>
         + ImplCap<CapabilityUiTextStyle>,
 {
-    style_btn_base(entity)
-        .bg(GRAY_700)
-        .text_color(GRAY_200)
+    style_btn_base(entity).bg(GRAY_700).text_color(GRAY_200)
 }
 
 /// Secondary button hover state.
@@ -92,9 +88,7 @@ where
         + ImplCap<CapabilityUiLayout>
         + ImplCap<CapabilityUiTextStyle>,
 {
-    style_btn_base(entity)
-        .bg(TRANSPARENT)
-        .text_color(GRAY_200)
+    style_btn_base(entity).bg(TRANSPARENT).text_color(GRAY_200)
 }
 
 /// Ghost button hover state.
@@ -175,10 +169,7 @@ where
         + ImplCap<CapabilityUiLayout>
         + ImplCap<CapabilityUiTextStyle>,
 {
-    entity
-        .h(Val::Px(32.0))
-        .px(Val::Px(SPACE_3))
-        .text_xs()
+    entity.h(Val::Px(32.0)).px(Val::Px(SPACE_3)).text_xs()
 }
 
 /// Large button — 48px height, wider padding.
@@ -191,10 +182,7 @@ where
         + ImplCap<CapabilityUiLayout>
         + ImplCap<CapabilityUiTextStyle>,
 {
-    entity
-        .h(Val::Px(48.0))
-        .px(Val::Px(SPACE_6))
-        .text_base()
+    entity.h(Val::Px(48.0)).px(Val::Px(SPACE_6)).text_base()
 }
 
 // ── Disabled state (applies on top of any variant) ─────────────────────────
@@ -209,7 +197,5 @@ where
         + ImplCap<CapabilityUiLayout>
         + ImplCap<CapabilityUiTextStyle>,
 {
-    entity
-        .bg(GRAY_800)
-        .text_color(TEXT_DISABLED)
+    entity.bg(GRAY_800).text_color(TEXT_DISABLED)
 }

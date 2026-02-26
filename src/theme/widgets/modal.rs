@@ -81,37 +81,35 @@ where
         + CapSet,
 {
     fn modal_overlay(self, children: impl FnOnce(&mut Imm<'_, '_, Cap>)) -> Self {
-        self
-            .style(|s| {
-                s.position_type = PositionType::Absolute;
-                s.left = Val::Px(0.0);
-                s.right = Val::Px(0.0);
-                s.top = Val::Px(0.0);
-                s.bottom = Val::Px(0.0);
-                s.display = Display::Flex;
-                s.align_items = AlignItems::Center;
-                s.justify_content = JustifyContent::Center;
-            })
-            .bg(Color::srgba(0.0, 0.0, 0.0, 0.5))
-            .z_index_global(1000)
-            .add(children)
+        self.style(|s| {
+            s.position_type = PositionType::Absolute;
+            s.left = Val::Px(0.0);
+            s.right = Val::Px(0.0);
+            s.top = Val::Px(0.0);
+            s.bottom = Val::Px(0.0);
+            s.display = Display::Flex;
+            s.align_items = AlignItems::Center;
+            s.justify_content = JustifyContent::Center;
+        })
+        .bg(Color::srgba(0.0, 0.0, 0.0, 0.5))
+        .z_index_global(1000)
+        .add(children)
     }
 
     fn modal_dialog(self, children: impl FnOnce(&mut Imm<'_, '_, Cap>)) -> Self {
-        self
-            .style(|s| {
-                s.display = Display::Flex;
-                s.flex_direction = FlexDirection::Column;
-                s.width = ModalSize::Medium.width();
-                s.max_height = ModalSize::Medium.max_height();
-                // Prevent dialog from being squished
-                s.flex_shrink = 0.0;
-            })
-            .bg(GRAY_800)
-            .rounded(8.0)
-            .border(1.0)
-            .border_color(GRAY_700)
-            .add(children)
+        self.style(|s| {
+            s.display = Display::Flex;
+            s.flex_direction = FlexDirection::Column;
+            s.width = ModalSize::Medium.width();
+            s.max_height = ModalSize::Medium.max_height();
+            // Prevent dialog from being squished
+            s.flex_shrink = 0.0;
+        })
+        .bg(GRAY_800)
+        .rounded(8.0)
+        .border(1.0)
+        .border_color(GRAY_700)
+        .add(children)
     }
 
     fn modal_size(self, size: ModalSize) -> Self {
@@ -123,50 +121,47 @@ where
 
     fn modal_header(self, title: impl Into<String>) -> Self {
         let t = title.into();
-        self
-            .style(|s| {
-                s.display = Display::Flex;
-                s.flex_direction = FlexDirection::Row;
-                s.align_items = AlignItems::Center;
-                s.padding = UiRect::axes(Val::Px(16.0), Val::Px(12.0));
-                s.border = UiRect::bottom(Val::Px(1.0));
-                s.flex_shrink = 0.0;
-            })
-            .border_color(GRAY_700)
-            .add(move |ui| {
-                ui.ch_id("modal_title")
-                    .label(t)
-                    .size(LabelSize::Large)
-                    .weight(FontWeight::Bold)
-                    .color(Color::WHITE);
-            })
+        self.style(|s| {
+            s.display = Display::Flex;
+            s.flex_direction = FlexDirection::Row;
+            s.align_items = AlignItems::Center;
+            s.padding = UiRect::axes(Val::Px(16.0), Val::Px(12.0));
+            s.border = UiRect::bottom(Val::Px(1.0));
+            s.flex_shrink = 0.0;
+        })
+        .border_color(GRAY_700)
+        .add(move |ui| {
+            ui.ch_id("modal_title")
+                .label(t)
+                .size(LabelSize::Large)
+                .weight(FontWeight::Bold)
+                .color(Color::WHITE);
+        })
     }
 
     fn modal_body(self, children: impl FnOnce(&mut Imm<'_, '_, Cap>)) -> Self {
-        self
-            .style(|s| {
-                s.display = Display::Flex;
-                s.flex_direction = FlexDirection::Column;
-                s.padding = UiRect::all(Val::Px(16.0));
-                s.flex_grow = 1.0;
-                s.overflow.y = OverflowAxis::Scroll;
-            })
-            .add(children)
+        self.style(|s| {
+            s.display = Display::Flex;
+            s.flex_direction = FlexDirection::Column;
+            s.padding = UiRect::all(Val::Px(16.0));
+            s.flex_grow = 1.0;
+            s.overflow.y = OverflowAxis::Scroll;
+        })
+        .add(children)
     }
 
     fn modal_footer(self, children: impl FnOnce(&mut Imm<'_, '_, Cap>)) -> Self {
-        self
-            .style(|s| {
-                s.display = Display::Flex;
-                s.flex_direction = FlexDirection::Row;
-                s.align_items = AlignItems::Center;
-                s.justify_content = JustifyContent::FlexEnd;
-                s.padding = UiRect::axes(Val::Px(16.0), Val::Px(12.0));
-                s.column_gap = Val::Px(8.0);
-                s.border = UiRect::top(Val::Px(1.0));
-                s.flex_shrink = 0.0;
-            })
-            .border_color(GRAY_700)
-            .add(children)
+        self.style(|s| {
+            s.display = Display::Flex;
+            s.flex_direction = FlexDirection::Row;
+            s.align_items = AlignItems::Center;
+            s.justify_content = JustifyContent::FlexEnd;
+            s.padding = UiRect::axes(Val::Px(16.0), Val::Px(12.0));
+            s.column_gap = Val::Px(8.0);
+            s.border = UiRect::top(Val::Px(1.0));
+            s.flex_shrink = 0.0;
+        })
+        .border_color(GRAY_700)
+        .add(children)
     }
 }
