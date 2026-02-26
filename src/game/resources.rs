@@ -196,6 +196,8 @@ pub struct Notification {
     pub level: NotificationLevel,
     /// Remaining seconds before this notification is dismissed.
     pub ttl: f32,
+    /// Whether this notification has been copied to the persistent EventLog.
+    pub logged: bool,
 }
 
 /// Resource that holds a queue of active notifications.
@@ -212,6 +214,7 @@ impl NotificationState {
             message: message.into(),
             level,
             ttl: 4.0,
+            logged: false,
         });
     }
 

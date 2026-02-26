@@ -51,11 +51,11 @@ fn tick_notifications(
     mut event_log: ResMut<resources::EventLog>,
     sim: Res<simulation::SimulationState>,
 ) {
-    // Copy new notifications to event log before ticking
-    for notification in &notifications.notifications {
-        // Only copy notifications that are brand new (ttl close to 4.0)
-        if notification.ttl > 3.9 {
+    // Copy unlogged notifications to event log exactly once
+    for notification in notifications.notifications.iter_mut() {
+        if !notification.logged {
             event_log.push(&notification.message, notification.level, sim.game_time);
+            notification.logged = true;
         }
     }
     notifications.tick(time.delta_secs());
