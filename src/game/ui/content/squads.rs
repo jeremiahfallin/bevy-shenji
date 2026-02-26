@@ -850,120 +850,140 @@ fn render_job_queue_panel(
                 }
             }
 
-            // Add job buttons at bottom
-            ui.ch()
+            // Add job buttons at bottom — use Display::None pattern to
+            // prevent entity reuse across modes (which causes stale
+            // observers and orphaned text children).
+            let is_picker = picker_mode == JobPickerMode::GatherPicker;
+
+            // Mode: None — show "+ Add Gather Job" button
+            ui.ch_id("job_add_btn")
                 .flex_row()
                 .w_full()
                 .p(Val::Px(SPACE_5))
                 .column_gap(SPACE_2)
+                .style(move |n: &mut Node| {
+                    n.display = if !is_picker {
+                        Display::Flex
+                    } else {
+                        Display::None
+                    };
+                })
                 .add(|ui| {
-                    match picker_mode {
-                        JobPickerMode::None => {
-                            if !gather_locations.is_empty() {
+                    if !gather_locations.is_empty() {
+                        ui.ch()
+                            .button()
+                            .style(|n: &mut Node| {
+                                n.padding = UiRect::axes(
+                                    Val::Px(SPACE_3),
+                                    Val::Px(SPACE_1_5),
+                                );
+                            })
+                            .bg(PRIMARY_500.with_alpha(0.2))
+                            .border(BORDER_WIDTH_DEFAULT)
+                            .border_color(PRIMARY_500.with_alpha(0.4))
+                            .rounded(RADIUS_DEFAULT)
+                            .on_click_once(
+                                move |_: On<Pointer<Click>>,
+                                      mut inspector: ResMut<InspectorState>| {
+                                    inspector.job_picker_mode =
+                                        JobPickerMode::GatherPicker;
+                                },
+                            )
+                            .add(|ui| {
                                 ui.ch()
-                                    .button()
-                                    .style(|n: &mut Node| {
-                                        n.padding = UiRect::axes(
-                                            Val::Px(SPACE_3),
-                                            Val::Px(SPACE_1_5),
-                                        );
-                                    })
-                                    .bg(PRIMARY_500.with_alpha(0.2))
-                                    .border(BORDER_WIDTH_DEFAULT)
-                                    .border_color(PRIMARY_500.with_alpha(0.4))
-                                    .rounded(RADIUS_DEFAULT)
-                                    .on_click_once(
-                                        move |_: On<Pointer<Click>>,
-                                              mut inspector: ResMut<InspectorState>| {
-                                            inspector.job_picker_mode =
-                                                JobPickerMode::GatherPicker;
-                                        },
-                                    )
-                                    .add(|ui| {
-                                        ui.ch()
-                                            .label("+ Add Gather Job")
-                                            .text_size(TEXT_XS)
-                                            .text_color(PRIMARY_400);
-                                    });
-                            } else {
-                                ui.ch()
-                                    .label("No resource locations available")
+                                    .label("+ Add Gather Job")
                                     .text_size(TEXT_XS)
-                                    .text_color(TEXT_MUTED);
-                            }
-                        }
-                        JobPickerMode::GatherPicker => {
-                            ui.ch().flex_col().w_full().row_gap(SPACE_1).add(|ui| {
-                                // Back button
-                                ui.ch()
-                                    .button()
-                                    .style(|n: &mut Node| {
-                                        n.padding = UiRect::axes(
-                                            Val::Px(SPACE_3),
-                                            Val::Px(SPACE_1_5),
-                                        );
-                                    })
-                                    .bg(GRAY_800)
-                                    .border(BORDER_WIDTH_DEFAULT)
-                                    .border_color(GRAY_700)
-                                    .rounded(RADIUS_DEFAULT)
-                                    .on_click_once(
-                                        move |_: On<Pointer<Click>>,
-                                              mut inspector: ResMut<InspectorState>| {
-                                            inspector.job_picker_mode = JobPickerMode::None;
-                                        },
-                                    )
-                                    .add(|ui| {
-                                        ui.ch()
-                                            .label("<- Back")
-                                            .text_size(TEXT_XS)
-                                            .text_color(GRAY_300);
-                                    });
-
-                                // Location buttons
-                                for (loc_id, loc_name, resource) in gather_locations {
-                                    let entity = entity_id;
-                                    let location = loc_id.clone();
-                                    let res = resource.clone();
-                                    let label = format!("{} ({})", loc_name, resource);
-
-                                    ui.ch()
-                                        .button()
-                                        .w_full()
-                                        .style(|n: &mut Node| {
-                                            n.padding = UiRect::axes(
-                                                Val::Px(SPACE_3),
-                                                Val::Px(SPACE_1_5),
-                                            );
-                                        })
-                                        .bg(GRAY_800)
-                                        .border(BORDER_WIDTH_DEFAULT)
-                                        .border_color(GRAY_700)
-                                        .rounded(RADIUS_DEFAULT)
-                                        .on_click_once(
-                                            move |_: On<Pointer<Click>>,
-                                                  mut inspector: ResMut<InspectorState>,
-                                                  mut action_query: Query<
-                                                &mut ActionState,
-                                            >| {
-                                                if let Ok(mut action_state) =
-                                                    action_query.get_mut(entity)
-                                                {
-                                                    let job = make_gather_job(&location, &res);
-                                                    action_state.job_queue.push(job);
-                                                }
-                                                inspector.job_picker_mode = JobPickerMode::None;
-                                            },
-                                        )
-                                        .add(|ui| {
-                                            ui.ch()
-                                                .label(&label)
-                                                .text_size(TEXT_XS)
-                                                .text_color(GRAY_100);
-                                        });
-                                }
+                                    .text_color(PRIMARY_400);
                             });
-                        }
+                    } else {
+                        ui.ch()
+                            .label("No resource locations available")
+                            .text_size(TEXT_XS)
+                            .text_color(TEXT_MUTED);
+                    }
+                });
+
+            // Mode: GatherPicker — show back button + location list
+            ui.ch_id("job_picker")
+                .flex_col()
+                .w_full()
+                .p(Val::Px(SPACE_5))
+                .row_gap(SPACE_1)
+                .style(move |n: &mut Node| {
+                    n.display = if is_picker {
+                        Display::Flex
+                    } else {
+                        Display::None
+                    };
+                })
+                .add(|ui| {
+                    // Back button
+                    ui.ch()
+                        .button()
+                        .style(|n: &mut Node| {
+                            n.padding = UiRect::axes(
+                                Val::Px(SPACE_3),
+                                Val::Px(SPACE_1_5),
+                            );
+                        })
+                        .bg(GRAY_800)
+                        .border(BORDER_WIDTH_DEFAULT)
+                        .border_color(GRAY_700)
+                        .rounded(RADIUS_DEFAULT)
+                        .on_click_once(
+                            move |_: On<Pointer<Click>>,
+                                  mut inspector: ResMut<InspectorState>| {
+                                inspector.job_picker_mode = JobPickerMode::None;
+                            },
+                        )
+                        .add(|ui| {
+                            ui.ch()
+                                .label("<- Back")
+                                .text_size(TEXT_XS)
+                                .text_color(GRAY_300);
+                        });
+
+                    // Location buttons
+                    for (loc_id, loc_name, resource) in gather_locations {
+                        let entity = entity_id;
+                        let location = loc_id.clone();
+                        let res = resource.clone();
+                        let label = format!("{} ({})", loc_name, resource);
+
+                        ui.ch()
+                            .button()
+                            .w_full()
+                            .style(|n: &mut Node| {
+                                n.padding = UiRect::axes(
+                                    Val::Px(SPACE_3),
+                                    Val::Px(SPACE_1_5),
+                                );
+                            })
+                            .bg(GRAY_800)
+                            .border(BORDER_WIDTH_DEFAULT)
+                            .border_color(GRAY_700)
+                            .rounded(RADIUS_DEFAULT)
+                            .on_click_once(
+                                move |_: On<Pointer<Click>>,
+                                      mut inspector: ResMut<InspectorState>,
+                                      mut action_query: Query<
+                                    &mut ActionState,
+                                >| {
+                                    if let Ok(mut action_state) =
+                                        action_query.get_mut(entity)
+                                    {
+                                        let job = make_gather_job(&location, &res);
+                                        action_state.job_queue.push(job);
+                                    }
+                                    inspector.job_picker_mode = JobPickerMode::None;
+                                },
+                            )
+                            .add(|ui| {
+                                ui.ch()
+                                    .label(&label)
+                                    .text_size(TEXT_XS)
+                                    .text_color(GRAY_100);
+                            });
                     }
                 });
         });
