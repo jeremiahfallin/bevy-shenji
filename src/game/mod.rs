@@ -18,6 +18,7 @@ pub fn plugin(app: &mut App) {
     app.init_resource::<resources::PlayerState>();
     app.init_resource::<resources::SquadState>();
     app.init_resource::<resources::NotificationState>();
+    app.init_resource::<resources::EventLog>();
     app.init_resource::<resources::BaseInventory>();
     app.init_resource::<resources::ExplorationState>();
     app.init_resource::<research::ResearchState>();
@@ -28,6 +29,7 @@ pub fn plugin(app: &mut App) {
     app.register_type::<resources::PlayerState>();
     app.register_type::<resources::SquadState>();
     app.register_type::<resources::NotificationState>();
+    app.register_type::<resources::EventLog>();
     app.register_type::<resources::BaseInventory>();
     app.register_type::<resources::ExplorationState>();
 

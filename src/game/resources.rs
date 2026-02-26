@@ -214,6 +214,35 @@ impl NotificationState {
     }
 }
 
+/// A persistent log entry for the event log sidebar.
+#[derive(Debug, Clone, Reflect)]
+pub struct EventLogEntry {
+    pub message: String,
+    pub level: NotificationLevel,
+    pub game_tick: u64,
+}
+
+/// Persistent event log that keeps a history of game events.
+#[derive(Resource, Debug, Default, Reflect)]
+#[reflect(Resource)]
+pub struct EventLog {
+    pub entries: VecDeque<EventLogEntry>,
+}
+
+impl EventLog {
+    pub const MAX_ENTRIES: usize = 100;
+
+    pub fn push(&mut self, message: impl Into<String>, level: NotificationLevel, game_tick: u64) {
+        self.entries.push_front(EventLogEntry {
+            message: message.into(),
+            level,
+            game_tick,
+        });
+        if self.entries.len() > Self::MAX_ENTRIES {
+            self.entries.pop_back();
+        }
+    }
+}
 #[derive(Resource, Clone, Debug, Default, Serialize, Deserialize, Reflect)]
 #[reflect(Resource)]
 pub struct BaseInventory {
