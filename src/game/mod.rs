@@ -44,6 +44,18 @@ pub fn plugin(app: &mut App) {
     app.add_plugins(ui::plugin);
 }
 
-fn tick_notifications(time: Res<Time>, mut notifications: ResMut<resources::NotificationState>) {
+fn tick_notifications(
+    time: Res<Time>,
+    mut notifications: ResMut<resources::NotificationState>,
+    mut event_log: ResMut<resources::EventLog>,
+    sim: Res<simulation::SimulationState>,
+) {
+    // Copy new notifications to event log before ticking
+    for notification in &notifications.notifications {
+        // Only copy notifications that are brand new (ttl close to 4.0)
+        if notification.ttl > 3.9 {
+            event_log.push(&notification.message, notification.level, sim.game_time);
+        }
+    }
     notifications.tick(time.delta_secs());
 }
