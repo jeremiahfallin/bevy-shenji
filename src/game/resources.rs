@@ -39,10 +39,19 @@ pub struct PlayerState {
     pub level: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Reflect, Serialize, Deserialize)]
+pub enum SquadStatus {
+    #[default]
+    Idle,
+    Active,
+    Traveling,
+}
 #[derive(Debug, Reflect, Clone, Serialize, Deserialize)]
 pub struct Squad {
     pub name: String,
     pub members: Vec<String>,
+    #[serde(default)]
+    pub status: SquadStatus,
 }
 
 #[derive(Resource, Debug, Reflect, Clone, Serialize, Deserialize)]
@@ -92,6 +101,7 @@ impl SquadState {
                 Squad {
                     name,
                     members: Vec::new(),
+                    status: SquadStatus::default(),
                 },
             );
             self.squad_order.push(squad_id);
