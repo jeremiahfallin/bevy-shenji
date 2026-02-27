@@ -39,10 +39,19 @@ pub struct PlayerState {
     pub level: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Reflect, Serialize, Deserialize)]
+pub enum SquadStatus {
+    #[default]
+    Idle,
+    Active,
+    Traveling,
+}
 #[derive(Debug, Reflect, Clone, Serialize, Deserialize)]
 pub struct Squad {
     pub name: String,
     pub members: Vec<String>,
+    #[serde(default)]
+    pub status: SquadStatus,
 }
 
 #[derive(Resource, Debug, Reflect, Clone, Serialize, Deserialize)]
@@ -92,6 +101,7 @@ impl SquadState {
                 Squad {
                     name,
                     members: Vec::new(),
+                    status: SquadStatus::default(),
                 },
             );
             self.squad_order.push(squad_id);
@@ -186,6 +196,8 @@ pub struct Notification {
     pub level: NotificationLevel,
     /// Remaining seconds before this notification is dismissed.
     pub ttl: f32,
+    /// Whether this notification has been copied to the persistent EventLog.
+    pub logged: bool,
 }
 
 /// Resource that holds a queue of active notifications.
@@ -202,6 +214,7 @@ impl NotificationState {
             message: message.into(),
             level,
             ttl: 4.0,
+            logged: false,
         });
     }
 
@@ -214,6 +227,35 @@ impl NotificationState {
     }
 }
 
+/// A persistent log entry for the event log sidebar.
+#[derive(Debug, Clone, Reflect)]
+pub struct EventLogEntry {
+    pub message: String,
+    pub level: NotificationLevel,
+    pub game_tick: u64,
+}
+
+/// Persistent event log that keeps a history of game events.
+#[derive(Resource, Debug, Default, Reflect)]
+#[reflect(Resource)]
+pub struct EventLog {
+    pub entries: VecDeque<EventLogEntry>,
+}
+
+impl EventLog {
+    pub const MAX_ENTRIES: usize = 100;
+
+    pub fn push(&mut self, message: impl Into<String>, level: NotificationLevel, game_tick: u64) {
+        self.entries.push_front(EventLogEntry {
+            message: message.into(),
+            level,
+            game_tick,
+        });
+        if self.entries.len() > Self::MAX_ENTRIES {
+            self.entries.pop_back();
+        }
+    }
+}
 #[derive(Resource, Clone, Debug, Default, Serialize, Deserialize, Reflect)]
 #[reflect(Resource)]
 pub struct BaseInventory {

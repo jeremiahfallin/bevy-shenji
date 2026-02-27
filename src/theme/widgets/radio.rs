@@ -34,8 +34,7 @@ where
     Cap: ImplCap<CapabilityUiLayout> + ImplCap<CapabilityUiVisuals> + CapSet,
 {
     fn radio_group(self, children: impl FnOnce(&mut Imm<'_, '_, Cap>)) -> Self {
-        self
-            .on_spawn_insert(|| bevy::ui_widgets::RadioGroup)
+        self.on_spawn_insert(|| bevy::ui_widgets::RadioGroup)
             .style(|s| {
                 s.display = Display::Flex;
                 s.flex_direction = FlexDirection::Column;
@@ -79,7 +78,8 @@ where
         let is_checked = checked;
         self.add(move |ui| {
             // Outer circle
-            let mut circle = ui.ch_id("radio_circle")
+            let mut circle = ui
+                .ch_id("radio_circle")
                 .style(|s| {
                     s.width = Val::Px(18.0);
                     s.height = Val::Px(18.0);
@@ -91,9 +91,7 @@ where
                 .rounded(9.0); // Fully round
 
             if is_checked {
-                circle = circle
-                    .border_color(PRIMARY_500)
-                    .bg(TRANSPARENT);
+                circle = circle.border_color(PRIMARY_500).bg(TRANSPARENT);
 
                 // Inner filled circle
                 circle.add(|ui| {
@@ -107,9 +105,7 @@ where
                         .rounded(5.0);
                 });
             } else {
-                circle
-                    .border_color(GRAY_700)
-                    .bg(TRANSPARENT);
+                circle.border_color(GRAY_700).bg(TRANSPARENT);
             }
 
             // Label text

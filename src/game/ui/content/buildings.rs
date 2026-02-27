@@ -51,8 +51,7 @@ impl ImmediateAttach<CapsUi> for BuildingsView {
             .scroll_y()
             .add(|ui| {
                 // --- Under Construction ---
-                let in_progress: Vec<_> =
-                    buildings_query.iter().filter(|b| !b.complete).collect();
+                let in_progress: Vec<_> = buildings_query.iter().filter(|b| !b.complete).collect();
 
                 if !in_progress.is_empty() {
                     ui.ch()
@@ -95,13 +94,10 @@ impl ImmediateAttach<CapsUi> for BuildingsView {
                 }
 
                 // --- Completed Buildings ---
-                let completed: Vec<_> =
-                    buildings_query.iter().filter(|b| b.complete).collect();
+                let completed: Vec<_> = buildings_query.iter().filter(|b| b.complete).collect();
 
                 if !completed.is_empty() {
-                    ui.ch()
-                        .sub_header("Completed")
-                        .mb(Val::Px(SPACE_1));
+                    ui.ch().sub_header("Completed").mb(Val::Px(SPACE_1));
 
                     for building in &completed {
                         let description = game_data
@@ -191,11 +187,7 @@ impl ImmediateAttach<CapsUi> for BuildingsView {
                             })
                             .map(|(e, info, _, _)| (e, info.name.clone()));
 
-                        let bg_color = if !research_met {
-                            GRAY_900
-                        } else {
-                            GRAY_800
-                        };
+                        let bg_color = if !research_met { GRAY_900 } else { GRAY_800 };
 
                         ui.ch()
                             .flex_col()
@@ -231,11 +223,7 @@ impl ImmediateAttach<CapsUi> for BuildingsView {
                                 ui.ch()
                                     .label(format!("Cost: {}", cost_parts.join(", ")))
                                     .text_size(11.0)
-                                    .text_color(if can_afford {
-                                        Color::WHITE
-                                    } else {
-                                        ERROR_500
-                                    });
+                                    .text_color(if can_afford { Color::WHITE } else { ERROR_500 });
 
                                 // Build time
                                 ui.ch()
@@ -250,14 +238,13 @@ impl ImmediateAttach<CapsUi> for BuildingsView {
                                     } else {
                                         format!("Consumes: {} power", def.power_generation.abs())
                                     };
-                                    ui.ch()
-                                        .label(power_text)
-                                        .text_size(11.0)
-                                        .text_color(if def.power_generation > 0 {
+                                    ui.ch().label(power_text).text_size(11.0).text_color(
+                                        if def.power_generation > 0 {
                                             SUCCESS_600
                                         } else {
                                             Color::srgb(0.8, 0.6, 0.2)
-                                        });
+                                        },
+                                    );
                                 }
 
                                 // Storage info
@@ -292,8 +279,7 @@ impl ImmediateAttach<CapsUi> for BuildingsView {
 
                                 // Build button (only show if research is met)
                                 if research_met {
-                                    let is_buildable =
-                                        can_afford && idle_at_base.is_some();
+                                    let is_buildable = can_afford && idle_at_base.is_some();
 
                                     let building_id = def.id.clone();
                                     let building_name = def.name.clone();

@@ -1,8 +1,8 @@
 use super::{
     bottom_bar::BottomBar, content::Content, context_menu::ContextMenuOverlay, sidebar::Sidebar,
 };
-use crate::screens::Screen;
 use crate::UiRoot;
+use crate::screens::Screen;
 use crate::theme::prelude::*;
 use bevy::prelude::*;
 

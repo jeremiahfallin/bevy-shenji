@@ -47,10 +47,7 @@ pub fn style_heading_2<'w, 's, 'a, Cap>(
 where
     Cap: CapSet + ImplCap<CapabilityUiTextStyle> + ImplCap<CapabilityUiLayout>,
 {
-    entity
-        .text_2xl()
-        .font_bold()
-        .text_color(TEXT_PRIMARY)
+    entity.text_2xl().font_bold().text_color(TEXT_PRIMARY)
 }
 
 /// Heading 3 — card/panel title.
@@ -60,22 +57,15 @@ pub fn style_heading_3<'w, 's, 'a, Cap>(
 where
     Cap: CapSet + ImplCap<CapabilityUiTextStyle> + ImplCap<CapabilityUiLayout>,
 {
-    entity
-        .text_xl()
-        .font_bold()
-        .text_color(TEXT_PRIMARY)
+    entity.text_xl().font_bold().text_color(TEXT_PRIMARY)
 }
 
 /// Body text — default readable text.
-pub fn style_body<'w, 's, 'a, Cap>(
-    entity: ImmEntity<'w, 's, 'a, Cap>,
-) -> ImmEntity<'w, 's, 'a, Cap>
+pub fn style_body<'w, 's, 'a, Cap>(entity: ImmEntity<'w, 's, 'a, Cap>) -> ImmEntity<'w, 's, 'a, Cap>
 where
     Cap: CapSet + ImplCap<CapabilityUiTextStyle> + ImplCap<CapabilityUiLayout>,
 {
-    entity
-        .text_base()
-        .text_color(TEXT_SECONDARY)
+    entity.text_base().text_color(TEXT_SECONDARY)
 }
 
 /// Body small — compact body text.
@@ -85,9 +75,7 @@ pub fn style_body_sm<'w, 's, 'a, Cap>(
 where
     Cap: CapSet + ImplCap<CapabilityUiTextStyle> + ImplCap<CapabilityUiLayout>,
 {
-    entity
-        .text_sm()
-        .text_color(TEXT_SECONDARY)
+    entity.text_sm().text_color(TEXT_SECONDARY)
 }
 
 /// Caption — small, muted annotation text.
@@ -97,9 +85,7 @@ pub fn style_caption<'w, 's, 'a, Cap>(
 where
     Cap: CapSet + ImplCap<CapabilityUiTextStyle> + ImplCap<CapabilityUiLayout>,
 {
-    entity
-        .text_xs()
-        .text_color(TEXT_MUTED)
+    entity.text_xs().text_color(TEXT_MUTED)
 }
 
 /// Overline — uppercase label above content.
@@ -109,20 +95,13 @@ pub fn style_overline<'w, 's, 'a, Cap>(
 where
     Cap: CapSet + ImplCap<CapabilityUiTextStyle> + ImplCap<CapabilityUiLayout>,
 {
-    entity
-        .text_xs()
-        .font_bold()
-        .text_color(TEXT_MUTED)
+    entity.text_xs().font_bold().text_color(TEXT_MUTED)
 }
 
 /// Code / monospaced — for inline code or data values.
-pub fn style_code<'w, 's, 'a, Cap>(
-    entity: ImmEntity<'w, 's, 'a, Cap>,
-) -> ImmEntity<'w, 's, 'a, Cap>
+pub fn style_code<'w, 's, 'a, Cap>(entity: ImmEntity<'w, 's, 'a, Cap>) -> ImmEntity<'w, 's, 'a, Cap>
 where
     Cap: CapSet + ImplCap<CapabilityUiTextStyle> + ImplCap<CapabilityUiLayout>,
 {
-    entity
-        .text_sm()
-        .text_color(TEXT_SECONDARY)
+    entity.text_sm().text_color(TEXT_SECONDARY)
 }

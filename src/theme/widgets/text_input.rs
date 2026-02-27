@@ -62,12 +62,7 @@ pub trait ImmUiTextInput {
     /// Creates a styled text input field.
     /// `placeholder` is shown when `value` is empty.
     /// `focused` controls the visual focus ring.
-    fn text_input(
-        self,
-        placeholder: impl Into<String>,
-        value: &str,
-        focused: bool,
-    ) -> Self;
+    fn text_input(self, placeholder: impl Into<String>, value: &str, focused: bool) -> Self;
 
     /// Sets the input size variant.
     fn text_input_size(self, size: TextInputSize) -> Self;
@@ -84,12 +79,7 @@ where
         + ImplCap<CapabilityUiText>
         + CapSet,
 {
-    fn text_input(
-        self,
-        placeholder: impl Into<String>,
-        value: &str,
-        focused: bool,
-    ) -> Self {
+    fn text_input(self, placeholder: impl Into<String>, value: &str, focused: bool) -> Self {
         let placeholder_text = placeholder.into();
         let current_value = value.to_string();
         let is_empty = current_value.is_empty();

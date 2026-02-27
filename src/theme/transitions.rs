@@ -162,8 +162,5 @@ pub fn tick_color_transitions(
 ///
 /// Call `app.add_plugins(transitions::plugin)` or add the systems manually.
 pub fn plugin(app: &mut App) {
-    app.add_systems(
-        Update,
-        (tick_fade_transitions, tick_color_transitions),
-    );
+    app.add_systems(Update, (tick_fade_transitions, tick_color_transitions));
 }

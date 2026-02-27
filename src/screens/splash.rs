@@ -10,12 +10,7 @@ use bevy_immediate::{
     ui::CapsUi,
 };
 
-use crate::{
-    AppSystems,
-    screens::Screen,
-    UiRoot,
-    theme::prelude::*,
-};
+use crate::{AppSystems, UiRoot, screens::Screen, theme::prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins(BevyImmediateAttachPlugin::<CapsUi, SplashScreen>::new());

@@ -7,6 +7,7 @@ use bevy_immediate::{
 };
 
 use crate::{
+    UiRoot,
     game::{
         building::Building,
         character::CharacterInfo,
@@ -20,7 +21,6 @@ use crate::{
         simulation::SimulationState,
     },
     screens::Screen,
-    UiRoot,
     theme::{prelude::*, scroll::ImmUiScrollExt},
 };
 

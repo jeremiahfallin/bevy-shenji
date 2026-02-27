@@ -35,18 +35,17 @@ where
     Cap: ImplCap<CapabilityUiLayout> + ImplCap<CapabilityUiVisuals> + CapSet,
 {
     fn tab_bar(self, children: impl FnOnce(&mut Imm<'_, '_, Cap>)) -> Self {
-        self
-            .style(|s| {
-                s.display = Display::Flex;
-                s.flex_direction = FlexDirection::Row;
-                s.width = Val::Percent(100.0);
-                s.flex_shrink = 0.0;
-                s.column_gap = Val::Px(2.0);
-                // Bottom border to visually separate tabs from content
-                s.border = UiRect::bottom(Val::Px(1.0));
-            })
-            .border_color(GRAY_700)
-            .add(children)
+        self.style(|s| {
+            s.display = Display::Flex;
+            s.flex_direction = FlexDirection::Row;
+            s.width = Val::Percent(100.0);
+            s.flex_shrink = 0.0;
+            s.column_gap = Val::Px(2.0);
+            // Bottom border to visually separate tabs from content
+            s.border = UiRect::bottom(Val::Px(1.0));
+        })
+        .border_color(GRAY_700)
+        .add(children)
     }
 }
 
@@ -85,13 +84,9 @@ where
         });
 
         if active {
-            self = self
-                .border_color(PRIMARY_500)
-                .bg(TRANSPARENT);
+            self = self.border_color(PRIMARY_500).bg(TRANSPARENT);
         } else {
-            self = self
-                .border_color(TRANSPARENT)
-                .bg(TRANSPARENT);
+            self = self.border_color(TRANSPARENT).bg(TRANSPARENT);
 
             // Apply hover state
             if let Ok(Some(interaction)) = self.cap_get_component::<Interaction>() {
@@ -104,14 +99,10 @@ where
         // Label
         let is_active = active;
         self.add(move |ui| {
-            let mut label_entity = ui.ch_id("tab_label")
-                .label(text)
-                .text_sm();
+            let mut label_entity = ui.ch_id("tab_label").label(text).text_sm();
 
             if is_active {
-                label_entity = label_entity
-                    .color(Color::WHITE)
-                    .weight(FontWeight::Bold);
+                label_entity = label_entity.color(Color::WHITE).weight(FontWeight::Bold);
             } else {
                 label_entity.color(Color::srgba(1.0, 1.0, 1.0, 0.6));
             }

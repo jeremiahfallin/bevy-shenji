@@ -66,19 +66,20 @@ where
         });
 
         // Trigger button styling
-        self = self.style(|s| {
-            s.display = Display::Flex;
-            s.flex_direction = FlexDirection::Row;
-            s.align_items = AlignItems::Center;
-            s.justify_content = JustifyContent::SpaceBetween;
-            s.padding = UiRect::axes(Val::Px(12.0), Val::Px(8.0));
-            s.min_width = Val::Px(120.0);
-            s.border = UiRect::all(Val::Px(1.0));
-            s.flex_shrink = 0.0;
-        })
-        .bg(GRAY_800)
-        .border_color(GRAY_700)
-        .rounded(6.0);
+        self = self
+            .style(|s| {
+                s.display = Display::Flex;
+                s.flex_direction = FlexDirection::Row;
+                s.align_items = AlignItems::Center;
+                s.justify_content = JustifyContent::SpaceBetween;
+                s.padding = UiRect::axes(Val::Px(12.0), Val::Px(8.0));
+                s.min_width = Val::Px(120.0);
+                s.border = UiRect::all(Val::Px(1.0));
+                s.flex_shrink = 0.0;
+            })
+            .bg(GRAY_800)
+            .border_color(GRAY_700)
+            .rounded(6.0);
 
         // Apply hover state
         if let Ok(Some(interaction)) = self.cap_get_component::<Interaction>() {
@@ -115,25 +116,24 @@ where
     }
 
     fn dropdown_menu(self, children: impl FnOnce(&mut Imm<'_, '_, Cap>)) -> Self {
-        self
-            .style(|s| {
-                s.position_type = PositionType::Absolute;
-                s.top = Val::Percent(100.0);
-                s.left = Val::Px(0.0);
-                s.right = Val::Px(0.0);
-                s.display = Display::Flex;
-                s.flex_direction = FlexDirection::Column;
-                s.margin = UiRect::top(Val::Px(2.0));
-                s.padding = UiRect::axes(Val::Px(0.0), Val::Px(4.0));
-                s.max_height = Val::Px(200.0);
-                s.overflow.y = OverflowAxis::Scroll;
-            })
-            .bg(GRAY_800)
-            .border(1.0)
-            .border_color(GRAY_700)
-            .rounded(6.0)
-            .z_index(50)
-            .add(children)
+        self.style(|s| {
+            s.position_type = PositionType::Absolute;
+            s.top = Val::Percent(100.0);
+            s.left = Val::Px(0.0);
+            s.right = Val::Px(0.0);
+            s.display = Display::Flex;
+            s.flex_direction = FlexDirection::Column;
+            s.margin = UiRect::top(Val::Px(2.0));
+            s.padding = UiRect::axes(Val::Px(0.0), Val::Px(4.0));
+            s.max_height = Val::Px(200.0);
+            s.overflow.y = OverflowAxis::Scroll;
+        })
+        .bg(GRAY_800)
+        .border(1.0)
+        .border_color(GRAY_700)
+        .rounded(6.0)
+        .z_index(50)
+        .add(children)
     }
 }
 
@@ -185,9 +185,7 @@ where
 
         let is_selected = selected;
         self.add(move |ui| {
-            let mut label_ent = ui.ch_id("item_label")
-                .label(text)
-                .text_sm();
+            let mut label_ent = ui.ch_id("item_label").label(text).text_sm();
 
             if is_selected {
                 label_ent = label_ent.color(Color::WHITE).weight(FontWeight::Bold);

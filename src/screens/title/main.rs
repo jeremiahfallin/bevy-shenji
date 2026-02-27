@@ -9,12 +9,8 @@ use bevy_immediate::{
 };
 
 use crate::{
-    asset_tracking::ResourceHandles,
-    game::save::LoadGameMessage,
-    menus::Menu,
-    screens::Screen,
-    UiRoot,
-    theme::prelude::*,
+    UiRoot, asset_tracking::ResourceHandles, game::save::LoadGameMessage, menus::Menu,
+    screens::Screen, theme::prelude::*,
 };
 
 use crate::screens::loading::TargetScreen;
