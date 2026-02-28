@@ -9,8 +9,8 @@
   },
   "squad_state": {
     "characters": {
-      "char_2": 17179869099,
-      "char_1": 17179869101
+      "char_2": 8589934517,
+      "char_1": 8589934512
     },
     "squads": {
       "1": {
@@ -18,7 +18,8 @@
         "members": [
           "char_1",
           "char_2"
-        ]
+        ],
+        "status": "Idle"
       }
     },
     "squad_order": [
@@ -49,7 +50,7 @@
     "research_progress": 0
   },
   "simulation_state": {
-    "game_time": 110,
+    "game_time": 130,
     "game_days": 0,
     "ticks_per_day": 600,
     "speed": 1,
@@ -58,10 +59,10 @@
   "base_inventory": {
     "items": {
       "bread": 20,
-      "zeni": 1000,
+      "stone": 10,
       "lumber": 10,
       "books": 5,
-      "stone": 10
+      "zeni": 1000
     }
   },
   "characters": [
@@ -80,7 +81,7 @@
         "right_arm": 100,
         "left_leg": 100,
         "right_leg": 100,
-        "hunger": 89
+        "hunger": 87
       },
       "skills": {
         "armor_smith": 0,
@@ -137,7 +138,72 @@
         "action_queue": [
           "Explore"
         ],
-        "job_queue": [],
+        "job_queue": [
+          {
+            "name": "Gather stone",
+            "actions": [
+              {
+                "Travel": {
+                  "destination": "stone_quarry"
+                }
+              },
+              {
+                "Gather": {
+                  "location": "stone_quarry",
+                  "resource": "stone"
+                }
+              },
+              {
+                "Collect": {
+                  "location": "stone_quarry",
+                  "item": "stone"
+                }
+              },
+              {
+                "Travel": {
+                  "destination": "base"
+                }
+              },
+              {
+                "Deposit": {
+                  "item": "stone"
+                }
+              }
+            ]
+          },
+          {
+            "name": "Gather stone",
+            "actions": [
+              {
+                "Travel": {
+                  "destination": "stone_quarry"
+                }
+              },
+              {
+                "Gather": {
+                  "location": "stone_quarry",
+                  "resource": "stone"
+                }
+              },
+              {
+                "Collect": {
+                  "location": "stone_quarry",
+                  "item": "stone"
+                }
+              },
+              {
+                "Travel": {
+                  "destination": "base"
+                }
+              },
+              {
+                "Deposit": {
+                  "item": "stone"
+                }
+              }
+            ]
+          }
+        ],
         "current_job_index": 0
       },
       "character_location": {
@@ -159,7 +225,7 @@
         "right_arm": 100,
         "left_leg": 100,
         "right_leg": 100,
-        "hunger": 89
+        "hunger": 87
       },
       "skills": {
         "armor_smith": 0,
