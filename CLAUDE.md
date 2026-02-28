@@ -34,7 +34,7 @@ src/
 │   ├── location.rs      # Location system (Village, City, Ruins, Wilderness)
 │   ├── research.rs      # Tech tree with dependency graph
 │   ├── resources.rs     # GameState, PlayerState, SquadState, UiState
-│   ├── save.rs          # JSON save/load with autosave (60s interval)
+│   ├── save.rs          # RON save/load with autosave (60s interval)
 │   ├── systems.rs       # Core game systems
 │   └── ui/              # In-game UI (sidebar, bottom bar, content views)
 │       └── content/     # Dashboard, Characters, Squads, Research views
@@ -49,7 +49,7 @@ assets/
 ├── audio/               # .ogg music and sound effects
 ├── fonts/               # GoogleSans.ttf, Kenney Space.ttf
 ├── images/              # Sprites and splash
-└── saves/               # JSON save files
+└── saves/               # RON save files
 ```
 
 ## Architecture & Conventions
@@ -74,8 +74,8 @@ assets/
 - **Modules**: snake_case, use `mod.rs` pattern
 
 ### Serialization
-- `serde` + `serde_json` for save/load
-- Game state persisted as JSON to `assets/saves/`
+- `serde` + `ron` for save/load
+- Game state persisted as RON to `assets/saves/`
 
 ### Code Style
 - 4-space indentation, LF line endings, UTF-8
