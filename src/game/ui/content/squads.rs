@@ -210,38 +210,62 @@ fn render_squad_card(
                 });
 
             // --- Job Queue for Selected Character ---
-            if let Some(selected_id) = &inspector_state.selected_character_id {
-                if squad.members.contains(selected_id) {
-                    if let Some(&entity) = squad_state.characters.get(selected_id) {
-                        if let Ok((info, _skills, action_state)) = char_query.get(entity) {
-                            let gather_locations: Vec<(String, String, String)> = location_query
-                                .iter()
-                                .filter(|(loc_info, res)| loc_info.discovered && res.is_some())
-                                .filter_map(|(loc_info, res)| {
-                                    let res = res?;
-                                    if res.resource_type.is_empty() || res.current_amount == 0 {
-                                        return None;
-                                    }
-                                    Some((
-                                        loc_info.id.clone(),
-                                        loc_info.name.clone(),
-                                        res.resource_type.clone(),
-                                    ))
-                                })
-                                .collect();
+            // Always render the wrapper so its layout (flex_col, w_full)
+            // is pre-computed. Toggle Display::None to show/hide.
+            // This prevents a one-frame layout shift when first selecting
+            // a character (new entities don't have layout until next frame).
+            let selected_member = inspector_state
+                .selected_character_id
+                .as_ref()
+                .filter(|id| squad.members.contains(id));
+            let show_job_queue = selected_member.is_some();
 
-                            render_job_queue_panel(
-                                ui,
-                                entity,
-                                info,
-                                action_state,
-                                &gather_locations,
-                                inspector_state.job_picker_mode,
-                            );
+            ui.ch_id("job_queue_wrapper")
+                .style(move |n: &mut Node| {
+                    n.display = if show_job_queue {
+                        Display::Flex
+                    } else {
+                        Display::None
+                    };
+                })
+                .add(|ui| {
+                    if let Some(selected_id) = selected_member {
+                        if let Some(&entity) = squad_state.characters.get(selected_id) {
+                            if let Ok((info, _skills, action_state)) = char_query.get(entity)
+                            {
+                                let gather_locations: Vec<(String, String, String)> =
+                                    location_query
+                                        .iter()
+                                        .filter(|(loc_info, res)| {
+                                            loc_info.discovered && res.is_some()
+                                        })
+                                        .filter_map(|(loc_info, res)| {
+                                            let res = res?;
+                                            if res.resource_type.is_empty()
+                                                || res.current_amount == 0
+                                            {
+                                                return None;
+                                            }
+                                            Some((
+                                                loc_info.id.clone(),
+                                                loc_info.name.clone(),
+                                                res.resource_type.clone(),
+                                            ))
+                                        })
+                                        .collect();
+
+                                render_job_queue_panel(
+                                    ui,
+                                    entity,
+                                    info,
+                                    action_state,
+                                    &gather_locations,
+                                    inspector_state.job_picker_mode,
+                                );
+                            }
                         }
                     }
-                }
-            }
+                });
         });
 }
 
