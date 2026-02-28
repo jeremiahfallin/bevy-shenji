@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::tasks::{IoTaskPool, Task, block_on, poll_once};
+use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -215,7 +216,7 @@ fn save_game(
             exploration_state: Some(exploration_state.clone()),
         };
 
-        let filename = format!("assets/saves/{}.json", message.0);
+        let filename = format!("assets/saves/{}.ron", message.0);
         let thread_pool = IoTaskPool::get();
 
         let task = thread_pool.spawn(async move {
@@ -224,8 +225,8 @@ fn save_game(
                 if let Some(parent) = std::path::Path::new(&filename).parent() {
                     let _ = std::fs::create_dir_all(parent);
                 }
-                match serde_json::to_string_pretty(&save_data) {
-                    Ok(json) => match std::fs::write(&filename, &json) {
+                match ron::ser::to_string_pretty(&save_data, PrettyConfig::default()) {
+                    Ok(ron_str) => match std::fs::write(&filename, &ron_str) {
                         Ok(()) => Ok(filename),
                         Err(e) => Err(format!("Write failed: {}", e)),
                     },
@@ -267,14 +268,14 @@ fn poll_save_game(
 fn start_load_game(mut commands: Commands, mut events: ResMut<Messages<LoadGameMessage>>) {
     // WORKAROUND: Use events.drain()
     for message in events.drain() {
-        let filename = format!("assets/saves/{}.json", message.0);
+        let filename = format!("assets/saves/{}.ron", message.0);
         let thread_pool = IoTaskPool::get();
 
         let task = thread_pool.spawn(async move {
             #[cfg(not(target_family = "wasm"))]
             {
                 match std::fs::read_to_string(&filename) {
-                    Ok(json) => match serde_json::from_str::<SaveData>(&json) {
+                    Ok(ron_str) => match ron::from_str::<SaveData>(&ron_str) {
                         Ok(data) => Ok(data),
                         Err(e) => Err(format!("Parse error: {}", e)),
                     },
