@@ -92,3 +92,9 @@ pub const GOLD_600: Color = Color::srgb(0.62, 0.52, 0.18);
 pub const TRANSPARENT: Color = Color::NONE;
 pub const WHITE: Color = Color::WHITE;
 pub const BLACK: Color = Color::BLACK;
+
+// ── Table ───────────────────────────────────────────────────────────────────
+/// Background color for table header and footer rows.
+pub const TABLE_HEADER_BG: Color = Color::srgba(0.1, 0.1, 0.1, 0.5);
+/// Background color for alternating (striped) table rows.
+pub const TABLE_STRIPE_BG: Color = Color::srgba(1.0, 1.0, 1.0, 0.03);

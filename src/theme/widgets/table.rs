@@ -145,9 +145,8 @@ where
     pub fn thead(&mut self, row_fn: impl FnOnce(&mut RowCtx<'_, 'w, 's, Cap>)) {
         let mut row_ctx = RowCtx {
             ui: self.ui,
-            row_bg: Some(Color::srgba(0.1, 0.1, 0.1, 0.5)),
+            row_bg: Some(TABLE_HEADER_BG),
             is_header: true,
-            _col_count: self.col_count,
         };
         row_fn(&mut row_ctx);
     }
@@ -164,7 +163,7 @@ where
         self.row_index += 1;
 
         let stripe_bg = if self.striped && row_idx % 2 == 1 {
-            Some(Color::srgba(1.0, 1.0, 1.0, 0.03))
+            Some(TABLE_STRIPE_BG)
         } else {
             None
         };
@@ -173,7 +172,6 @@ where
             ui: self.ui,
             row_bg: stripe_bg,
             is_header: false,
-            _col_count: self.col_count,
         };
         row_fn(&mut row_ctx);
     }
@@ -182,9 +180,8 @@ where
     pub fn tfoot_row(&mut self, row_fn: impl FnOnce(&mut RowCtx<'_, 'w, 's, Cap>)) {
         let mut row_ctx = RowCtx {
             ui: self.ui,
-            row_bg: Some(Color::srgba(0.1, 0.1, 0.1, 0.5)),
+            row_bg: Some(TABLE_HEADER_BG),
             is_header: false,
-            _col_count: self.col_count,
         };
         row_fn(&mut row_ctx);
     }
@@ -210,7 +207,6 @@ pub struct RowCtx<'a, 'w, 's, Cap: CapSet> {
     ui: &'a mut Imm<'w, 's, Cap>,
     row_bg: Option<Color>,
     is_header: bool,
-    _col_count: u16,
 }
 
 impl<Cap> RowCtx<'_, '_, '_, Cap>
