@@ -7,6 +7,7 @@ use bevy_immediate::{CapSet, ImmEntity, ImplCap};
 use crate::theme::components::list::{List, ListItem};
 use crate::theme::prelude::*;
 use crate::theme::widgets::label::{FontWeight, LabelSize};
+use crate::theme::widgets::table::Table;
 use bevy_immediate::Imm;
 
 // Re-export from primitives
@@ -43,6 +44,7 @@ where
 pub trait ImmUiCompositeWidgets<Cap: CapSet> {
     fn list(&mut self) -> List;
     fn list_item(&mut self, id: impl Into<String>) -> ListItem<Cap>;
+    fn table(&mut self) -> Table;
 }
 
 impl<Cap> ImmUiCompositeWidgets<Cap> for Imm<'_, '_, Cap>
@@ -55,6 +57,10 @@ where
 
     fn list_item(&mut self, id: impl Into<String>) -> ListItem<Cap> {
         ListItem::new(id)
+    }
+
+    fn table(&mut self) -> Table {
+        Table::new()
     }
 }
 
