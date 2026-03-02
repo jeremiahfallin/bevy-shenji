@@ -67,22 +67,6 @@ impl ImmediateAttach<CapsUi> for Content {
                 }
             };
 
-            // Like `view_style` but enables scrolling on both axes, for views
-            // whose content may exceed the available space.
-            let scrollable_view_style = |is_active: bool| {
-                move |n: &mut Node| {
-                    n.width = Val::Percent(100.0);
-                    n.height = Val::Percent(100.0);
-                    n.overflow.x = OverflowAxis::Scroll;
-                    n.overflow.y = OverflowAxis::Scroll;
-                    n.display = if is_active {
-                        Display::Flex
-                    } else {
-                        Display::None
-                    };
-                }
-            };
-
             ui.ch_id("view_dashboard")
                 .style(view_style(active == GameView::Dashboard))
                 .on_spawn_insert(|| DashboardView);
@@ -92,7 +76,7 @@ impl ImmediateAttach<CapsUi> for Content {
                 .on_spawn_insert(|| ResearchView);
 
             ui.ch_id("view_characters")
-                .style(scrollable_view_style(active == GameView::Characters))
+                .style(view_style(active == GameView::Characters))
                 .on_spawn_insert(|| CharactersView);
 
             ui.ch_id("view_squads")
