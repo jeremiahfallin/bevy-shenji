@@ -5,7 +5,11 @@
       "Bash(ls:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(cargo fmt:*)"
+      "Bash(cargo fmt:*)",
+      "Bash(cargo test)",
+      "Bash(git push -u origin claude/romantic-nightingale)",
+      "Bash(gh pr:*)",
+      "Bash(git push)"
     ]
   }
 }
