@@ -37,13 +37,30 @@ fn attach_scroll_handlers(trigger: On<Add, ScrollableContent>, mut commands: Com
 }
 
 // Triggered when the mouse wheel is scrolled over the entity
-fn on_scroll_event(trigger: On<Pointer<Scroll>>, mut query: Query<&mut UiScrollPosition>) {
+fn on_scroll_event(
+    trigger: On<Pointer<Scroll>>,
+    mut query: Query<&mut UiScrollPosition>,
+    keys: Res<ButtonInput<KeyCode>>,
+) {
     if let Ok(mut scroll) = query.get_mut(trigger.entity) {
         // Adjust sensitivity (pixels per scroll line)
         const SCROLL_SENSITIVITY: f32 = 40.0;
 
-        scroll.x -= trigger.event().x * SCROLL_SENSITIVITY;
-        scroll.y -= trigger.event().y * SCROLL_SENSITIVITY;
+        let mut dx = trigger.event().x;
+        let mut dy = trigger.event().y;
+
+        // Shift+scroll redirects vertical scroll to horizontal (standard UX
+        // pattern). On Windows, the OS does not convert Shift+wheel to
+        // horizontal scroll, so we handle it here.
+        let shift_held =
+            keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
+        if shift_held && dx == 0.0 {
+            dx = dy;
+            dy = 0.0;
+        }
+
+        scroll.x -= dx * SCROLL_SENSITIVITY;
+        scroll.y -= dy * SCROLL_SENSITIVITY;
 
         // Clamp to 0.0 (prevents scrolling past the top)
         // Note: For full clamping (bottom), we'd need ComputedNode size,
