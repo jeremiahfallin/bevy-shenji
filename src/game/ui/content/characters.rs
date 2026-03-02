@@ -1,6 +1,7 @@
 use crate::{
     game::{
         character::CharacterInfo,
+        character::Skills,
         ui::{
             context_menu::{ContextMenuType, ImmUiContextMenuExt},
             inspector::InspectorState,
@@ -15,37 +16,57 @@ use bevy_immediate::{Imm, attach::ImmediateAttach, ui::CapsUi};
 pub struct CharactersView;
 
 impl ImmediateAttach<CapsUi> for CharactersView {
-    type Params = (Query<'static, 'static, (Entity, &'static CharacterInfo)>,);
+    type Params = (Query<'static, 'static, (Entity, &'static CharacterInfo, &'static Skills)>,);
 
-    fn construct(ui: &mut Imm<CapsUi>, params: &mut (Query<(Entity, &CharacterInfo)>,)) {
+    fn construct(ui: &mut Imm<CapsUi>, params: &mut (Query<(Entity, &CharacterInfo, &Skills)>,)) {
         let (character_query,) = params;
-        ui.ch().header("Characters");
 
-        ui.ch().flex_col().w_full().p(Val::Px(SPACE_2_5)).add(|ui| {
-            for (entity, info) in character_query.iter() {
-                let char_id = info.id.clone();
-                let char_name = info.name.clone();
+        let mut table = Table::new()
+            .column(Column::flex(1.0))
+            .column(Column::px(80.0))
+            .column(Column::auto());
 
-                ui.ch()
-                    .button()
-                    .w_full()
-                    .mb(Val::Px(SPACE_1))
-                    .p(Val::Px(SPACE_2_5))
-                    // Standard Left Click (Selection)
-                    .on_click_once(
-                        move |trigger: On<Pointer<Click>>,
-                              mut inspector: ResMut<InspectorState>| {
-                            if trigger.event().button == PointerButton::Primary {
-                                inspector.selected_character_id = Some(char_id.clone());
-                            }
-                        },
-                    )
-                    // Context Menu (Right Click) - No conflict now!
-                    .context_menu(ContextMenuType::Character, entity)
-                    .add(|ui| {
-                        ui.ch().label(char_name);
+        for _ in Skills::default().iter() {
+            table = table.column(Column::auto());
+        }
+
+        table.striped(true).render(ui, |table| {
+            table.thead(|row| {
+                row.th(|ui| {
+                    ui.ch().label("Name");
+                });
+                row.th(|ui| {
+                    ui.ch().label("Race");
+                });
+                row.th(|ui| {
+                    ui.ch().label("Status");
+                });
+                for (skill, _) in Skills::default().iter() {
+                    row.th(|ui| {
+                        ui.ch().label(skill);
                     });
-            }
+                }
+            });
+            table.tbody(|body| {
+                for (_, character, skills) in character_query.iter() {
+                    body.tr(|row| {
+                        row.td(|ui| {
+                            ui.ch().label(character.name.clone());
+                        });
+                        row.td(|ui| {
+                            ui.ch().label(format!("{}", character.race.clone()));
+                        });
+                        row.td(|ui| {
+                            ui.ch().badge("Active").badge_variant(BadgeVariant::Success);
+                        });
+                        for (_, level) in skills.iter() {
+                            row.td(|ui| {
+                                ui.ch().label(format!("{}", level));
+                            });
+                        }
+                    });
+                }
+            });
         });
     }
 }

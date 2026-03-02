@@ -1,0 +1,167 @@
+{
+  "game_state": {
+    "current_level": 1,
+    "game_time": 0.0,
+    "is_paused": false,
+    "game_days": 0
+  },
+  "player_state": {
+    "gold": 1000,
+    "experience": 0,
+    "level": 1
+  },
+  "squad_state": {
+    "characters": {
+      "char_2": 4294966824,
+      "char_1": 4294966825
+    },
+    "squads": {
+      "1": {
+        "name": "Squad 1",
+        "members": [
+          "char_1",
+          "char_2"
+        ]
+      }
+    },
+    "squad_order": [
+      1
+    ],
+    "selected_character": null,
+    "next_id": 3,
+    "next_squad_id": 1
+  },
+  "base_state": null,
+  "characters": [
+    {
+      "info": {
+        "id": "char_1",
+        "name": "Leader",
+        "race": "Human",
+        "subrace": "Northerner",
+        "location": "Home Base"
+      },
+      "health": {
+        "head": 0,
+        "stomach": 0,
+        "chest": 0,
+        "left_arm": 0,
+        "right_arm": 0,
+        "left_leg": 0,
+        "right_leg": 0,
+        "hunger": 0
+      },
+      "skills": {
+        "armor_smith": 0,
+        "assassination": 0,
+        "athletics": 0,
+        "blunt": 0,
+        "cooking": 0,
+        "crossbows": 0,
+        "crossbow_smith": 0,
+        "dexterity": 0,
+        "dodge": 0,
+        "engineer": 0,
+        "farming": 0,
+        "hackers": 0,
+        "heavy_weapons": 0,
+        "katanas": 0,
+        "labouring": 0,
+        "lockpicking": 0,
+        "martial_arts": 0,
+        "medic": 0,
+        "melee_attack": 0,
+        "melee_defense": 0,
+        "perception": 0,
+        "polearms": 0,
+        "robotics": 0,
+        "sabres": 0,
+        "science": 0,
+        "scouting": 0,
+        "stealth": 0,
+        "strength": 0,
+        "thievery": 0,
+        "toughness": 0,
+        "turrets": 0,
+        "weapon_smith": 0
+      },
+      "equipment": {
+        "head": null,
+        "chest": null,
+        "legs": null,
+        "feet": null,
+        "hands": null,
+        "main_hand": null
+      },
+      "inventory": {
+        "items": {}
+      },
+      "squad": 0
+    },
+    {
+      "info": {
+        "id": "char_2",
+        "name": "Warrior",
+        "race": "Skeleton",
+        "subrace": "Worker",
+        "location": "Home Base"
+      },
+      "health": {
+        "head": 0,
+        "stomach": 0,
+        "chest": 0,
+        "left_arm": 0,
+        "right_arm": 0,
+        "left_leg": 0,
+        "right_leg": 0,
+        "hunger": 0
+      },
+      "skills": {
+        "armor_smith": 0,
+        "assassination": 0,
+        "athletics": 0,
+        "blunt": 0,
+        "cooking": 0,
+        "crossbows": 0,
+        "crossbow_smith": 0,
+        "dexterity": 0,
+        "dodge": 0,
+        "engineer": 0,
+        "farming": 0,
+        "hackers": 0,
+        "heavy_weapons": 0,
+        "katanas": 0,
+        "labouring": 0,
+        "lockpicking": 0,
+        "martial_arts": 0,
+        "medic": 0,
+        "melee_attack": 0,
+        "melee_defense": 0,
+        "perception": 0,
+        "polearms": 0,
+        "robotics": 0,
+        "sabres": 0,
+        "science": 0,
+        "scouting": 0,
+        "stealth": 0,
+        "strength": 0,
+        "thievery": 0,
+        "toughness": 0,
+        "turrets": 0,
+        "weapon_smith": 0
+      },
+      "equipment": {
+        "head": null,
+        "chest": null,
+        "legs": null,
+        "feet": null,
+        "hands": null,
+        "main_hand": null
+      },
+      "inventory": {
+        "items": {}
+      },
+      "squad": 0
+    }
+  ]
+}

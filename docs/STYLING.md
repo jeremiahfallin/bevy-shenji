@@ -90,9 +90,9 @@ All gray values are uniform RGB (e.g. `GRAY_500` = `(0.5, 0.5, 0.5)`).
 
 ### Semantic -- Text
 
-| Name               | Value                    | Usage               |
+| Name               | Value                    | Usage                |
 |--------------------|--------------------------|----------------------|
-| `TEXT_PRIMARY`      | `White`                  | Primary text         |
+| `TEXT_PRIMARY`      | `White`                 | Primary text         |
 | `TEXT_SECONDARY`    | `(0.8, 0.8, 0.8)`       | Secondary text       |
 | `TEXT_MUTED`        | `(0.5, 0.5, 0.5)`       | De-emphasized        |
 | `TEXT_DISABLED`     | `(0.35, 0.35, 0.35)`    | Disabled controls    |
@@ -103,25 +103,25 @@ All gray values are uniform RGB (e.g. `GRAY_500` = `(0.5, 0.5, 0.5)`).
 
 | Name              | Value                  | Usage                |
 |-------------------|------------------------|----------------------|
-| `SURFACE_BASE`    | `(0.08, 0.08, 0.08)`  | App background       |
-| `SURFACE_RAISED`  | `(0.12, 0.12, 0.12)`  | Cards / panels       |
-| `SURFACE_OVERLAY` | `(0.15, 0.15, 0.15)`  | Modals / dropdowns   |
-| `SURFACE_INSET`   | `(0.1, 0.1, 0.1)`     | Wells / inputs       |
+| `SURFACE_BASE`    | `(0.08, 0.08, 0.08)`   | App background       |
+| `SURFACE_RAISED`  | `(0.12, 0.12, 0.12)`   | Cards / panels       |
+| `SURFACE_OVERLAY` | `(0.15, 0.15, 0.15)`   | Modals / dropdowns   |
+| `SURFACE_INSET`   | `(0.1, 0.1, 0.1)`      | Wells / inputs       |
 
 ### Semantic -- Border
 
-| Name              | Value                  | Usage           |
-|-------------------|------------------------|-----------------|
-| `BORDER_DEFAULT`  | `(0.25, 0.25, 0.25)`  | Standard border |
-| `BORDER_STRONG`   | `(0.35, 0.35, 0.35)`  | Emphasis border |
-| `BORDER_MUTED`    | `(0.18, 0.18, 0.18)`  | Subtle border   |
+| Name              | Value                  | Usage                |
+|-------------------|------------------------|----------------------|
+| `BORDER_DEFAULT`  | `(0.25, 0.25, 0.25)`   | Standard border      |
+| `BORDER_STRONG`   | `(0.35, 0.35, 0.35)`   | Emphasis border      |
+| `BORDER_MUTED`    | `(0.18, 0.18, 0.18)`   | Subtle border        |
 
 ### Overlay
 
 | Name                | Value                   |
 |---------------------|-------------------------|
-| `OVERLAY_BACKDROP`  | `srgba(0, 0, 0, 0.5)`  |
-| `OVERLAY_SUBTLE`    | `srgba(0, 0, 0, 0.2)`  |
+| `OVERLAY_BACKDROP`  | `srgba(0, 0, 0, 0.5)`   |
+| `OVERLAY_SUBTLE`    | `srgba(0, 0, 0, 0.2)`   |
 
 ### Other
 
@@ -130,8 +130,8 @@ All gray values are uniform RGB (e.g. `GRAY_500` = `(0.5, 0.5, 0.5)`).
 | `GOLD_400`        | Gold, light                  |
 | `GOLD_500`        | Gold, default                |
 | `GOLD_600`        | Gold, dark                   |
-| `TABLE_HEADER_BG` | `srgba(0.1, 0.1, 0.1, 0.5)` |
-| `TABLE_STRIPE_BG` | `srgba(1, 1, 1, 0.03)`      |
+| `TABLE_HEADER_BG` | `srgba(0.1, 0.1, 0.1, 0.5)`  |
+| `TABLE_STRIPE_BG` | `srgba(1, 1, 1, 0.03)`       |
 | `TRANSPARENT`     | `Color::NONE`                |
 | `WHITE`           | `Color::WHITE`               |
 | `BLACK`           | `Color::BLACK`               |
