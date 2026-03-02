@@ -9,7 +9,10 @@
       "Bash(cargo test)",
       "Bash(git push -u origin claude/romantic-nightingale)",
       "Bash(gh pr:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(bevy run --target web --help)",
+      "Bash(bevy run web --help)",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }
