@@ -112,6 +112,9 @@ impl Table {
             .w_full()
             .row_gap(0.0)
             .column_gap(0.0)
+            .style(|n: &mut Node| {
+                n.align_content = AlignContent::Start;
+            })
             .add(move |ui| {
                 let mut ctx = TableCtx {
                     ui,
