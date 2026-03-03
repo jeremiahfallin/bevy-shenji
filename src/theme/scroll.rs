@@ -39,10 +39,22 @@ fn attach_scroll_handlers(trigger: On<Add, ScrollableContent>, mut commands: Com
 // Triggered when the mouse wheel is scrolled over the entity
 fn on_scroll_event(
     trigger: On<Pointer<Scroll>>,
-    mut query: Query<&mut UiScrollPosition>,
+    mut query: Query<(&mut UiScrollPosition, &ComputedNode, &ChildOf)>,
+    parent_query: Query<&ComputedNode>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
-    if let Ok(mut scroll) = query.get_mut(trigger.entity) {
+    if let Ok((mut scroll, content_node, child_of)) = query.get_mut(trigger.entity) {
+        let Ok(viewport_node) = parent_query.get(child_of.parent()) else {
+            return;
+        };
+
+        let content_size = content_node.size();
+        let viewport_size = viewport_node.size();
+
+        // Only allow scrolling when content overflows the viewport
+        let max_scroll_x = (content_size.x - viewport_size.x).max(0.0);
+        let max_scroll_y = (content_size.y - viewport_size.y).max(0.0);
+
         // Adjust sensitivity (pixels per scroll line)
         const SCROLL_SENSITIVITY: f32 = 40.0;
 
@@ -59,22 +71,37 @@ fn on_scroll_event(
             dy = 0.0;
         }
 
-        scroll.x -= dx * SCROLL_SENSITIVITY;
-        scroll.y -= dy * SCROLL_SENSITIVITY;
-
-        // Clamp to 0.0 (prevents scrolling past the top)
-        // Note: For full clamping (bottom), we'd need ComputedNode size,
-        // which is complex in immediate mode. For now, we allow infinite scroll down.
-        scroll.x = scroll.x.max(0.0);
-        scroll.y = scroll.y.max(0.0);
+        scroll.x = (scroll.x - dx * SCROLL_SENSITIVITY).clamp(0.0, max_scroll_x);
+        scroll.y = (scroll.y - dy * SCROLL_SENSITIVITY).clamp(0.0, max_scroll_y);
     }
 }
 
 // Syncs the abstract ScrollPosition to the actual UI Node style
 fn update_scroll_layout(
-    mut query: Query<(&UiScrollPosition, &mut Node), Changed<UiScrollPosition>>,
+    mut query: Query<
+        (&mut UiScrollPosition, &mut Node, &ComputedNode, &ChildOf),
+        Changed<UiScrollPosition>,
+    >,
+    parent_query: Query<&ComputedNode>,
 ) {
-    for (pos, mut node) in query.iter_mut() {
+    for (mut pos, mut node, content_node, child_of) in query.iter_mut() {
+        // Clamp scroll position to actual overflow bounds
+        if let Ok(viewport_node) = parent_query.get(child_of.parent()) {
+            let content_size = content_node.size();
+            let viewport_size = viewport_node.size();
+
+            let max_x = (content_size.x - viewport_size.x).max(0.0);
+            let max_y = (content_size.y - viewport_size.y).max(0.0);
+
+            let clamped_x = pos.x.clamp(0.0, max_x);
+            let clamped_y = pos.y.clamp(0.0, max_y);
+
+            if pos.x != clamped_x || pos.y != clamped_y {
+                pos.x = clamped_x;
+                pos.y = clamped_y;
+            }
+        }
+
         // Move the content up/left by the scroll amount
         node.left = Val::Px(-pos.x);
         node.top = Val::Px(-pos.y);
