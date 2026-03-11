@@ -28,8 +28,8 @@ impl ImmediateAttach<CapsUi> for CharactersView {
                 },
                 |ui| {
                     let mut table = Table::new()
-                        .column(Column::flex(1.0))
-                        .column(Column::px(80.0))
+                        .column(Column::px(150.0))
+                        .column(Column::px(100.0))
                         .column(Column::auto());
 
                     for _ in Skills::default().iter() {
