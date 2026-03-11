@@ -1,7 +1,6 @@
 pub mod badge;
 pub mod button;
 pub mod checkbox;
-pub mod context_menu;
 pub mod divider;
 pub mod dropdown;
 pub mod icon;
@@ -19,7 +18,6 @@ pub mod tooltip;
 pub use badge::*;
 pub use button::*;
 pub use checkbox::*;
-pub use context_menu::*;
 pub use divider::*;
 pub use dropdown::*;
 pub use icon::*;
