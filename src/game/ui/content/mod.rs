@@ -35,6 +35,7 @@ pub(super) fn plugin(app: &mut App) {
         BevyImmediateAttachPlugin::<CapsUi, LocationsView>::new(),
         BevyImmediateAttachPlugin::<CapsUi, BuildingsView>::new(),
     ));
+    app.add_systems(Update, characters::debug_characters_scroll);
 }
 
 #[derive(Component)]

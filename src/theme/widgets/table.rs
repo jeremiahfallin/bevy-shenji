@@ -109,7 +109,7 @@ impl Table {
         ui.ch()
             .grid()
             .grid_template_columns(tracks)
-            .w_full()
+            .min_w(Val::Percent(100.0))
             .row_gap(0.0)
             .column_gap(0.0)
             .style(|n: &mut Node| {
@@ -226,6 +226,7 @@ where
         let mut cell = self
             .ui
             .ch()
+            .overflow_clip()
             .py(Val::Px(SPACE_3))
             .px(Val::Px(SPACE_4))
             .style(|n: &mut Node| {
@@ -242,7 +243,7 @@ where
 
     /// Render a body cell.
     pub fn td(&mut self, content: impl FnOnce(&mut Imm<Cap>)) {
-        let mut cell = self.ui.ch().py(Val::Px(SPACE_3)).px(Val::Px(SPACE_4));
+        let mut cell = self.ui.ch().overflow_clip().py(Val::Px(SPACE_3)).px(Val::Px(SPACE_4));
 
         if let Some(bg) = self.row_bg {
             cell = cell.bg(bg);
