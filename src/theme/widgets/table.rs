@@ -109,7 +109,7 @@ impl Table {
         ui.ch()
             .grid()
             .grid_template_columns(tracks)
-            .w_full()
+            .min_w(Val::Percent(100.0))
             .row_gap(0.0)
             .column_gap(0.0)
             .style(|n: &mut Node| {
