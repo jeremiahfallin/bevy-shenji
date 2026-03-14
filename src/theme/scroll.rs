@@ -1,4 +1,4 @@
-use bevy::picking::events::{Pointer, Scroll};
+use bevy::picking::events::{Click, Drag, DragEnd, DragStart, Out, Over, Pointer, Scroll};
 use bevy::prelude::*;
 use bevy_immediate::{CapSet, Imm, ImmEntity, ImplCap};
 
@@ -66,19 +66,12 @@ pub struct ScrollbarDragState {
 }
 
 // Scrollbar visual constants
-#[allow(dead_code)]
 const SCROLLBAR_SIZE: f32 = 6.0;
-#[allow(dead_code)]
 const SCROLLBAR_MIN_THUMB: f32 = 20.0;
-#[allow(dead_code)]
 const SCROLLBAR_IDLE_ALPHA: f32 = 0.5;
-#[allow(dead_code)]
 const SCROLLBAR_HOVER_ALPHA: f32 = 0.7;
-#[allow(dead_code)]
 const SCROLLBAR_DRAG_ALPHA: f32 = 0.9;
-#[allow(dead_code)]
 const SCROLLBAR_FADE_IN_SPEED: f32 = 6.0;
-#[allow(dead_code)]
 const SCROLLBAR_FADE_OUT_SPEED: f32 = 3.0;
 
 // 2. PLUGIN
@@ -88,6 +81,9 @@ impl Plugin for ScrollWidgetPlugin {
     fn build(&self, app: &mut App) {
         // 1. Listen for new scroll areas to attach input handlers
         app.add_observer(attach_scroll_handlers);
+        // 1b. Attach drag/hover handlers to thumbs, click handler to tracks
+        app.add_observer(attach_scrollbar_drag_handlers);
+        app.add_observer(attach_scrollbar_track_click);
         // 2. Update the visual layout based on scroll position every frame
         app.add_systems(Update, update_scroll_layout);
         // 3. Size and position scrollbar thumbs each frame
@@ -341,6 +337,270 @@ fn update_scrollbar_layout(
                 }
                 break;
             }
+        }
+    }
+}
+
+// — Scrollbar interaction observers —
+
+/// When a ScrollbarThumb is added, attach drag and hover observers.
+fn attach_scrollbar_drag_handlers(trigger: On<Add, ScrollbarThumb>, mut commands: Commands) {
+    let thumb_entity = trigger.entity;
+    commands
+        .entity(thumb_entity)
+        .observe(on_thumb_drag_start)
+        .observe(on_thumb_drag)
+        .observe(on_thumb_drag_end)
+        .observe(on_thumb_hover_in)
+        .observe(on_thumb_hover_out);
+}
+
+/// When a ScrollbarTrack is added, attach click observer.
+fn attach_scrollbar_track_click(trigger: On<Add, ScrollbarTrack>, mut commands: Commands) {
+    let track_entity = trigger.entity;
+    commands.entity(track_entity).observe(on_track_click);
+}
+
+fn on_thumb_drag_start(
+    trigger: On<Pointer<DragStart>>,
+    thumb_query: Query<&ScrollbarThumb>,
+    scroll_query: Query<&UiScrollPosition>,
+    mut track_query: Query<(&ScrollbarTrack, &mut ScrollbarVisibility)>,
+    mut commands: Commands,
+) {
+    let thumb_entity = trigger.entity;
+    let Ok(thumb) = thumb_query.get(thumb_entity) else {
+        return;
+    };
+    let Ok(scroll_pos) = scroll_query.get(thumb.content_entity) else {
+        return;
+    };
+
+    let pointer_pos = trigger.event().pointer_location.position;
+    let (start_scroll, start_mouse) = match thumb.axis {
+        ScrollAxis::Vertical => (scroll_pos.y, pointer_pos.y),
+        ScrollAxis::Horizontal => (scroll_pos.x, pointer_pos.x),
+    };
+
+    commands
+        .entity(thumb_entity)
+        .insert(ScrollbarDragState {
+            start_scroll,
+            start_mouse,
+        });
+
+    // Set track to drag opacity
+    for (track, mut vis) in track_query.iter_mut() {
+        if track.content_entity == thumb.content_entity && track.axis == thumb.axis {
+            vis.target_opacity = SCROLLBAR_DRAG_ALPHA;
+            break;
+        }
+    }
+}
+
+fn on_thumb_drag(
+    trigger: On<Pointer<Drag>>,
+    thumb_query: Query<(&ScrollbarThumb, &ScrollbarDragState)>,
+    mut scroll_query: Query<(&mut UiScrollPosition, &ComputedNode, &ChildOf)>,
+    viewport_query: Query<&ComputedNode, Without<UiScrollPosition>>,
+    track_query: Query<(&ScrollbarTrack, &ComputedNode), Without<UiScrollPosition>>,
+) {
+    let thumb_entity = trigger.entity;
+    let Ok((thumb, drag_state)) = thumb_query.get(thumb_entity) else {
+        return;
+    };
+    let Ok((mut scroll_pos, content_node, child_of)) = scroll_query.get_mut(thumb.content_entity)
+    else {
+        return;
+    };
+    let Ok(viewport_node) = viewport_query.get(child_of.parent()) else {
+        return;
+    };
+
+    let content_size = content_node.size();
+    let viewport_size = viewport_node.size();
+
+    let (content_len, viewport_len) = match thumb.axis {
+        ScrollAxis::Vertical => (content_size.y, viewport_size.y),
+        ScrollAxis::Horizontal => (content_size.x, viewport_size.x),
+    };
+
+    let max_scroll = (content_len - viewport_len).max(0.0);
+    if max_scroll <= 0.0 {
+        return;
+    }
+
+    // Find matching track to get track length
+    let mut track_len = 0.0;
+    for (track, track_computed) in track_query.iter() {
+        if track.content_entity == thumb.content_entity && track.axis == thumb.axis {
+            track_len = match thumb.axis {
+                ScrollAxis::Vertical => track_computed.size().y,
+                ScrollAxis::Horizontal => track_computed.size().x,
+            };
+            break;
+        }
+    }
+
+    if track_len <= 0.0 {
+        return;
+    }
+
+    let thumb_len =
+        ((viewport_len / content_len) * track_len).clamp(SCROLLBAR_MIN_THUMB, track_len);
+    let scrollable_track = track_len - thumb_len;
+
+    if scrollable_track <= 0.0 {
+        return;
+    }
+
+    let pointer_pos = trigger.event().pointer_location.position;
+    let current_mouse = match thumb.axis {
+        ScrollAxis::Vertical => pointer_pos.y,
+        ScrollAxis::Horizontal => pointer_pos.x,
+    };
+
+    let mouse_delta = current_mouse - drag_state.start_mouse;
+    let scroll_delta = mouse_delta * (max_scroll / scrollable_track);
+    let new_scroll = (drag_state.start_scroll + scroll_delta).clamp(0.0, max_scroll);
+
+    match thumb.axis {
+        ScrollAxis::Vertical => scroll_pos.y = new_scroll,
+        ScrollAxis::Horizontal => scroll_pos.x = new_scroll,
+    }
+}
+
+fn on_thumb_drag_end(
+    trigger: On<Pointer<DragEnd>>,
+    thumb_query: Query<&ScrollbarThumb>,
+    mut track_query: Query<(&ScrollbarTrack, &mut ScrollbarVisibility)>,
+    mut commands: Commands,
+    time: Res<Time>,
+) {
+    let thumb_entity = trigger.entity;
+    commands
+        .entity(thumb_entity)
+        .remove::<ScrollbarDragState>();
+
+    let Ok(thumb) = thumb_query.get(thumb_entity) else {
+        return;
+    };
+
+    for (track, mut vis) in track_query.iter_mut() {
+        if track.content_entity == thumb.content_entity && track.axis == thumb.axis {
+            vis.target_opacity = SCROLLBAR_IDLE_ALPHA;
+            vis.last_activity = time.elapsed_secs();
+            break;
+        }
+    }
+}
+
+fn on_track_click(
+    trigger: On<Pointer<Click>>,
+    track_query: Query<(&ScrollbarTrack, &ComputedNode, &GlobalTransform)>,
+    mut scroll_query: Query<(&mut UiScrollPosition, &ComputedNode, &ChildOf)>,
+    viewport_query: Query<&ComputedNode, Without<UiScrollPosition>>,
+) {
+    let track_entity = trigger.entity;
+    let Ok((track, track_computed, track_transform)) = track_query.get(track_entity) else {
+        return;
+    };
+    let Ok((mut scroll_pos, content_node, child_of)) = scroll_query.get_mut(track.content_entity)
+    else {
+        return;
+    };
+    let Ok(viewport_node) = viewport_query.get(child_of.parent()) else {
+        return;
+    };
+
+    let content_size = content_node.size();
+    let viewport_size = viewport_node.size();
+
+    let (content_len, viewport_len) = match track.axis {
+        ScrollAxis::Vertical => (content_size.y, viewport_size.y),
+        ScrollAxis::Horizontal => (content_size.x, viewport_size.x),
+    };
+
+    let max_scroll = (content_len - viewport_len).max(0.0);
+    if max_scroll <= 0.0 {
+        return;
+    }
+
+    let track_size = track_computed.size();
+    let track_len = match track.axis {
+        ScrollAxis::Vertical => track_size.y,
+        ScrollAxis::Horizontal => track_size.x,
+    };
+
+    if track_len <= 0.0 {
+        return;
+    }
+
+    // Get click position relative to track
+    let click_pos = trigger.event().pointer_location.position;
+    let track_global_pos = track_transform.translation().truncate();
+    // The track's global transform gives us the center; we need top-left.
+    // ComputedNode size is in logical pixels; transform is also in logical pixels for UI.
+    let track_top_left = track_global_pos - track_size * 0.5;
+
+    let relative_pos = match track.axis {
+        ScrollAxis::Vertical => click_pos.y - track_top_left.y,
+        ScrollAxis::Horizontal => click_pos.x - track_top_left.x,
+    };
+
+    // Scale by inverse_scale_factor to convert from screen to logical pixels
+    let isf = track_computed.inverse_scale_factor();
+    let relative_logical = relative_pos * isf;
+
+    let ratio = (relative_logical / track_len).clamp(0.0, 1.0);
+    let new_scroll = (ratio * max_scroll).clamp(0.0, max_scroll);
+
+    match track.axis {
+        ScrollAxis::Vertical => scroll_pos.y = new_scroll,
+        ScrollAxis::Horizontal => scroll_pos.x = new_scroll,
+    }
+}
+
+fn on_thumb_hover_in(
+    trigger: On<Pointer<Over>>,
+    thumb_query: Query<&ScrollbarThumb>,
+    mut track_query: Query<(&ScrollbarTrack, &mut ScrollbarVisibility)>,
+) {
+    let thumb_entity = trigger.entity;
+    let Ok(thumb) = thumb_query.get(thumb_entity) else {
+        return;
+    };
+
+    for (track, mut vis) in track_query.iter_mut() {
+        if track.content_entity == thumb.content_entity && track.axis == thumb.axis {
+            vis.target_opacity = SCROLLBAR_HOVER_ALPHA;
+            break;
+        }
+    }
+}
+
+fn on_thumb_hover_out(
+    trigger: On<Pointer<Out>>,
+    thumb_query: Query<&ScrollbarThumb>,
+    drag_query: Query<&ScrollbarDragState>,
+    mut track_query: Query<(&ScrollbarTrack, &mut ScrollbarVisibility)>,
+    time: Res<Time>,
+) {
+    let thumb_entity = trigger.entity;
+    let Ok(thumb) = thumb_query.get(thumb_entity) else {
+        return;
+    };
+
+    // Don't reduce opacity if currently dragging
+    if drag_query.get(thumb_entity).is_ok() {
+        return;
+    }
+
+    for (track, mut vis) in track_query.iter_mut() {
+        if track.content_entity == thumb.content_entity && track.axis == thumb.axis {
+            vis.target_opacity = SCROLLBAR_IDLE_ALPHA;
+            vis.last_activity = time.elapsed_secs();
+            break;
         }
     }
 }
