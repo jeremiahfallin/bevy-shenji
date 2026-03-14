@@ -17,6 +17,70 @@ pub struct UiScrollPosition {
 #[derive(Component)]
 pub struct ScrollableContent;
 
+/// Which axis a scrollbar controls.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ScrollAxis {
+    Horizontal,
+    Vertical,
+}
+
+/// Marker on a scrollbar track node. Points to the ScrollableContent entity.
+#[derive(Component)]
+pub struct ScrollbarTrack {
+    pub axis: ScrollAxis,
+    pub content_entity: Entity,
+}
+
+/// Marker on a scrollbar thumb node. Points to the ScrollableContent entity.
+#[derive(Component)]
+pub struct ScrollbarThumb {
+    pub axis: ScrollAxis,
+    pub content_entity: Entity,
+}
+
+/// Drives scrollbar fade animation.
+#[derive(Component)]
+pub struct ScrollbarVisibility {
+    pub opacity: f32,
+    pub target_opacity: f32,
+    pub last_activity: f32,
+    pub fade_delay: f32,
+}
+
+impl Default for ScrollbarVisibility {
+    fn default() -> Self {
+        Self {
+            opacity: 0.0,
+            target_opacity: 0.0,
+            last_activity: 0.0,
+            fade_delay: 1.5,
+        }
+    }
+}
+
+/// Inserted on thumb during drag. Removed on drag end.
+#[derive(Component)]
+pub struct ScrollbarDragState {
+    pub start_scroll: f32,
+    pub start_mouse: f32,
+}
+
+// Scrollbar visual constants
+#[allow(dead_code)]
+const SCROLLBAR_SIZE: f32 = 6.0;
+#[allow(dead_code)]
+const SCROLLBAR_MIN_THUMB: f32 = 20.0;
+#[allow(dead_code)]
+const SCROLLBAR_IDLE_ALPHA: f32 = 0.5;
+#[allow(dead_code)]
+const SCROLLBAR_HOVER_ALPHA: f32 = 0.7;
+#[allow(dead_code)]
+const SCROLLBAR_DRAG_ALPHA: f32 = 0.9;
+#[allow(dead_code)]
+const SCROLLBAR_FADE_IN_SPEED: f32 = 6.0;
+#[allow(dead_code)]
+const SCROLLBAR_FADE_OUT_SPEED: f32 = 3.0;
+
 // 2. PLUGIN
 pub struct ScrollWidgetPlugin;
 
