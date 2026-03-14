@@ -95,6 +95,17 @@ impl Plugin for ScrollWidgetPlugin {
             Update,
             update_scrollbar_layout.after(update_scroll_layout),
         );
+        // 4. Fade animation: visibility → fade → apply opacity
+        app.add_systems(
+            Update,
+            (
+                update_scrollbar_visibility_on_scroll,
+                tick_scrollbar_fade,
+                apply_scrollbar_opacity,
+            )
+                .chain()
+                .after(update_scrollbar_layout),
+        );
     }
 }
 
@@ -328,6 +339,77 @@ fn update_scrollbar_layout(
                         thumb_node.left = Val::Px(thumb_pos);
                     }
                 }
+                break;
+            }
+        }
+    }
+}
+
+// — Fade animation systems —
+
+/// When scroll position changes, mark matching tracks as active.
+fn update_scrollbar_visibility_on_scroll(
+    changed_scroll: Query<Entity, Changed<UiScrollPosition>>,
+    mut track_query: Query<(&ScrollbarTrack, &mut ScrollbarVisibility)>,
+    time: Res<Time>,
+) {
+    for content_entity in changed_scroll.iter() {
+        for (track, mut vis) in track_query.iter_mut() {
+            if track.content_entity == content_entity {
+                vis.last_activity = time.elapsed_secs();
+                vis.target_opacity = SCROLLBAR_IDLE_ALPHA;
+            }
+        }
+    }
+}
+
+/// Lerps opacity toward target; triggers fade-out after delay (skips if dragging).
+fn tick_scrollbar_fade(
+    time: Res<Time>,
+    mut track_query: Query<(&ScrollbarTrack, &mut ScrollbarVisibility)>,
+    drag_query: Query<(Entity, &ScrollbarThumb), With<ScrollbarDragState>>,
+) {
+    let dt = time.delta_secs();
+    let now = time.elapsed_secs();
+
+    for (track, mut vis) in track_query.iter_mut() {
+        // Check if any thumb for this track is being dragged
+        let is_dragging = drag_query.iter().any(|(_, thumb)| {
+            thumb.content_entity == track.content_entity && thumb.axis == track.axis
+        });
+
+        if !is_dragging && now - vis.last_activity > vis.fade_delay {
+            vis.target_opacity = 0.0;
+        }
+
+        let speed = if vis.target_opacity > vis.opacity {
+            SCROLLBAR_FADE_IN_SPEED
+        } else {
+            SCROLLBAR_FADE_OUT_SPEED
+        };
+        vis.opacity = lerp_toward(vis.opacity, vis.target_opacity, speed * dt);
+    }
+}
+
+fn lerp_toward(current: f32, target: f32, max_delta: f32) -> f32 {
+    if (target - current).abs() <= max_delta {
+        target
+    } else if target > current {
+        current + max_delta
+    } else {
+        current - max_delta
+    }
+}
+
+/// Applies the track's visibility opacity to the thumb's BackgroundColor.
+fn apply_scrollbar_opacity(
+    track_query: Query<(&ScrollbarTrack, &ScrollbarVisibility)>,
+    mut thumb_query: Query<(&ScrollbarThumb, &mut BackgroundColor)>,
+) {
+    for (thumb, mut bg) in thumb_query.iter_mut() {
+        for (track, vis) in track_query.iter() {
+            if track.content_entity == thumb.content_entity && track.axis == thumb.axis {
+                bg.0 = Color::srgba(1.0, 1.0, 1.0, vis.opacity);
                 break;
             }
         }
