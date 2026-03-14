@@ -90,14 +90,109 @@ impl Plugin for ScrollWidgetPlugin {
         app.add_observer(attach_scroll_handlers);
         // 2. Update the visual layout based on scroll position every frame
         app.add_systems(Update, update_scroll_layout);
+        // 3. Size and position scrollbar thumbs each frame
+        app.add_systems(
+            Update,
+            update_scrollbar_layout.after(update_scroll_layout),
+        );
     }
 }
 
 // 3. SYSTEMS & OBSERVERS
 
-// Triggered when 'ScrollableContent' is added to an entity
-fn attach_scroll_handlers(trigger: On<Add, ScrollableContent>, mut commands: Commands) {
-    commands.entity(trigger.entity).observe(on_scroll_event);
+// Triggered when 'ScrollableContent' is added to an entity.
+// Attaches scroll input handler and spawns scrollbar track+thumb pairs.
+fn attach_scroll_handlers(
+    trigger: On<Add, ScrollableContent>,
+    mut commands: Commands,
+    child_of_query: Query<&ChildOf>,
+) {
+    let content_entity = trigger.entity;
+    commands.entity(content_entity).observe(on_scroll_event);
+
+    // Look up the viewport (parent) entity so scrollbars become siblings of content.
+    let Ok(child_of) = child_of_query.get(content_entity) else {
+        return;
+    };
+    let viewport_entity = child_of.parent();
+
+    // Spawn vertical scrollbar: track with thumb child
+    let vert_thumb = commands
+        .spawn((
+            ScrollbarThumb {
+                axis: ScrollAxis::Vertical,
+                content_entity,
+            },
+            Node {
+                position_type: PositionType::Absolute,
+                width: Val::Px(SCROLLBAR_SIZE),
+                min_height: Val::Px(SCROLLBAR_MIN_THUMB),
+                top: Val::Px(0.0),
+                left: Val::Px(0.0),
+                ..default()
+            },
+            BorderRadius::all(Val::Px(SCROLLBAR_SIZE / 2.0)),
+            BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
+        ))
+        .id();
+
+    commands
+        .spawn((
+            ScrollbarTrack {
+                axis: ScrollAxis::Vertical,
+                content_entity,
+            },
+            ScrollbarVisibility::default(),
+            Node {
+                position_type: PositionType::Absolute,
+                width: Val::Px(SCROLLBAR_SIZE),
+                right: Val::Px(0.0),
+                top: Val::Px(0.0),
+                bottom: Val::Px(0.0),
+                ..default()
+            },
+            ChildOf(viewport_entity),
+        ))
+        .add_child(vert_thumb);
+
+    // Spawn horizontal scrollbar: track with thumb child
+    let horiz_thumb = commands
+        .spawn((
+            ScrollbarThumb {
+                axis: ScrollAxis::Horizontal,
+                content_entity,
+            },
+            Node {
+                position_type: PositionType::Absolute,
+                height: Val::Px(SCROLLBAR_SIZE),
+                min_width: Val::Px(SCROLLBAR_MIN_THUMB),
+                top: Val::Px(0.0),
+                left: Val::Px(0.0),
+                ..default()
+            },
+            BorderRadius::all(Val::Px(SCROLLBAR_SIZE / 2.0)),
+            BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
+        ))
+        .id();
+
+    commands
+        .spawn((
+            ScrollbarTrack {
+                axis: ScrollAxis::Horizontal,
+                content_entity,
+            },
+            ScrollbarVisibility::default(),
+            Node {
+                position_type: PositionType::Absolute,
+                height: Val::Px(SCROLLBAR_SIZE),
+                bottom: Val::Px(0.0),
+                left: Val::Px(0.0),
+                right: Val::Px(0.0),
+                ..default()
+            },
+            ChildOf(viewport_entity),
+        ))
+        .add_child(horiz_thumb);
 }
 
 // Triggered when the mouse wheel is scrolled over the entity
@@ -169,6 +264,73 @@ fn update_scroll_layout(
         // Move the content up/left by the scroll amount
         node.left = Val::Px(-pos.x);
         node.top = Val::Px(-pos.y);
+    }
+}
+
+// Sizes and positions scrollbar thumbs based on content vs viewport sizes.
+// Hides tracks when there is no overflow.
+fn update_scrollbar_layout(
+    content_query: Query<(&UiScrollPosition, &ComputedNode, &ChildOf)>,
+    viewport_query: Query<&ComputedNode>,
+    mut track_query: Query<(&ScrollbarTrack, &mut Node, &ComputedNode)>,
+    mut thumb_query: Query<(&ScrollbarThumb, &mut Node), Without<ScrollbarTrack>>,
+) {
+    for (track, mut track_node, track_computed) in track_query.iter_mut() {
+        let Ok((scroll_pos, content_node, child_of)) = content_query.get(track.content_entity)
+        else {
+            continue;
+        };
+        let Ok(viewport_node) = viewport_query.get(child_of.parent()) else {
+            continue;
+        };
+
+        let content_size = content_node.size();
+        let viewport_size = viewport_node.size();
+
+        let (content_len, viewport_len, scroll_val) = match track.axis {
+            ScrollAxis::Vertical => (content_size.y, viewport_size.y, scroll_pos.y),
+            ScrollAxis::Horizontal => (content_size.x, viewport_size.x, scroll_pos.x),
+        };
+
+        let max_scroll = (content_len - viewport_len).max(0.0);
+
+        // Hide track if no overflow
+        if max_scroll <= 0.0 {
+            track_node.display = Display::None;
+            continue;
+        }
+        track_node.display = Display::Flex;
+
+        // Compute thumb size and position
+        let track_len = match track.axis {
+            ScrollAxis::Vertical => track_computed.size().y,
+            ScrollAxis::Horizontal => track_computed.size().x,
+        };
+
+        let thumb_len =
+            ((viewport_len / content_len) * track_len).clamp(SCROLLBAR_MIN_THUMB, track_len);
+        let thumb_pos = if max_scroll > 0.0 {
+            (scroll_val / max_scroll) * (track_len - thumb_len)
+        } else {
+            0.0
+        };
+
+        // Update matching thumb
+        for (thumb, mut thumb_node) in thumb_query.iter_mut() {
+            if thumb.content_entity == track.content_entity && thumb.axis == track.axis {
+                match thumb.axis {
+                    ScrollAxis::Vertical => {
+                        thumb_node.height = Val::Px(thumb_len);
+                        thumb_node.top = Val::Px(thumb_pos);
+                    }
+                    ScrollAxis::Horizontal => {
+                        thumb_node.width = Val::Px(thumb_len);
+                        thumb_node.left = Val::Px(thumb_pos);
+                    }
+                }
+                break;
+            }
+        }
     }
 }
 
