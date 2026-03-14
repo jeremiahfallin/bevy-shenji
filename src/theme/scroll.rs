@@ -132,16 +132,18 @@ where
         self
             // Outer Container (The Window)
             .style(|n| {
-                n.display = Display::Grid;
-                // Single cell grid ensures content overlaps/fills correctly
-                n.grid_template_columns = vec![GridTrack::flex(1.0)];
-                n.grid_template_rows = vec![GridTrack::flex(1.0)];
+                n.display = Display::Flex;
                 // Critical: Clip content that moves outside
                 n.overflow = Overflow::clip();
             })
             .add(|ui| {
                 // Inner Container (The Moving Content)
+                // flex_shrink: 0 ensures content keeps its natural size
+                // and can overflow the parent (which clips it)
                 ui.ch()
+                    .style(|n| {
+                        n.flex_shrink = 0.0;
+                    })
                     .style(inner_style_fn)
                     .on_spawn_insert(|| (UiScrollPosition::default(), ScrollableContent))
                     .add(content);
