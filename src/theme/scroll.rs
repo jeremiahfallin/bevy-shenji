@@ -1,4 +1,4 @@
-use bevy::picking::events::{Click, Drag, DragEnd, DragStart, Out, Over, Pointer, Scroll};
+use bevy::picking::events::{Drag, DragEnd, DragStart, Out, Over, Pointer, Scroll};
 use bevy::prelude::*;
 use bevy_immediate::{CapSet, Imm, ImmEntity, ImplCap};
 
@@ -8,6 +8,7 @@ use crate::theme::primitives::{
 };
 
 // 1. COMPONENTS
+
 #[derive(Component, Default)]
 pub struct UiScrollPosition {
     pub x: f32,
@@ -18,24 +19,22 @@ pub struct UiScrollPosition {
 pub struct ScrollableContent;
 
 /// Which axis a scrollbar controls.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ScrollAxis {
     Horizontal,
     Vertical,
 }
 
-/// Marker on a scrollbar track node. Points to the ScrollableContent entity.
+/// Marker on a scrollbar track node. No entity references — uses hierarchy.
 #[derive(Component)]
 pub struct ScrollbarTrack {
     pub axis: ScrollAxis,
-    pub content_entity: Entity,
 }
 
-/// Marker on a scrollbar thumb node. Points to the ScrollableContent entity.
+/// Marker on a scrollbar thumb node. No entity references — uses hierarchy.
 #[derive(Component)]
 pub struct ScrollbarThumb {
     pub axis: ScrollAxis,
-    pub content_entity: Entity,
 }
 
 /// Drives scrollbar fade animation.
@@ -50,8 +49,8 @@ pub struct ScrollbarVisibility {
 impl Default for ScrollbarVisibility {
     fn default() -> Self {
         Self {
-            opacity: 0.0,
-            target_opacity: 0.0,
+            opacity: SCROLLBAR_IDLE_ALPHA,
+            target_opacity: SCROLLBAR_IDLE_ALPHA,
             last_activity: 0.0,
             fade_delay: 1.5,
         }
@@ -79,19 +78,20 @@ pub struct ScrollWidgetPlugin;
 
 impl Plugin for ScrollWidgetPlugin {
     fn build(&self, app: &mut App) {
-        // 1. Listen for new scroll areas to attach input handlers
+        // Attach scroll input handler when content is spawned
         app.add_observer(attach_scroll_handlers);
-        // 1b. Attach drag/hover handlers to thumbs, click handler to tracks
+        // Attach drag/hover handlers to thumbs
         app.add_observer(attach_scrollbar_drag_handlers);
-        app.add_observer(attach_scrollbar_track_click);
-        // 2. Update the visual layout based on scroll position every frame
+        // Update the visual layout based on scroll position every frame
         app.add_systems(Update, update_scroll_layout);
-        // 3. Size and position scrollbar thumbs each frame
+        // Size and position scrollbar thumbs each frame.
+        // Runs in Update so Node changes are applied BEFORE PostUpdate layout.
+        // ComputedNode from the previous frame provides valid viewport/content sizes.
         app.add_systems(
             Update,
             update_scrollbar_layout.after(update_scroll_layout),
         );
-        // 4. Fade animation: visibility → fade → apply opacity
+        // Fade animation
         app.add_systems(
             Update,
             (
@@ -105,104 +105,27 @@ impl Plugin for ScrollWidgetPlugin {
     }
 }
 
-// 3. SYSTEMS & OBSERVERS
-
-// Triggered when 'ScrollableContent' is added to an entity.
-// Attaches scroll input handler and spawns scrollbar track+thumb pairs.
-fn attach_scroll_handlers(
-    trigger: On<Add, ScrollableContent>,
-    mut commands: Commands,
-    child_of_query: Query<&ChildOf>,
-) {
-    let content_entity = trigger.entity;
-    commands.entity(content_entity).observe(on_scroll_event);
-
-    // Look up the viewport (parent) entity so scrollbars become siblings of content.
-    let Ok(child_of) = child_of_query.get(content_entity) else {
-        return;
-    };
-    let viewport_entity = child_of.parent();
-
-    // Spawn vertical scrollbar: track with thumb child
-    let vert_thumb = commands
-        .spawn((
-            ScrollbarThumb {
-                axis: ScrollAxis::Vertical,
-                content_entity,
-            },
-            Node {
-                position_type: PositionType::Absolute,
-                width: Val::Px(SCROLLBAR_SIZE),
-                min_height: Val::Px(SCROLLBAR_MIN_THUMB),
-                top: Val::Px(0.0),
-                left: Val::Px(0.0),
-                ..default()
-            },
-            BorderRadius::all(Val::Px(SCROLLBAR_SIZE / 2.0)),
-            BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
-        ))
-        .id();
-
-    commands
-        .spawn((
-            ScrollbarTrack {
-                axis: ScrollAxis::Vertical,
-                content_entity,
-            },
-            ScrollbarVisibility::default(),
-            Node {
-                position_type: PositionType::Absolute,
-                width: Val::Px(SCROLLBAR_SIZE),
-                right: Val::Px(0.0),
-                top: Val::Px(0.0),
-                bottom: Val::Px(0.0),
-                ..default()
-            },
-            ChildOf(viewport_entity),
-        ))
-        .add_child(vert_thumb);
-
-    // Spawn horizontal scrollbar: track with thumb child
-    let horiz_thumb = commands
-        .spawn((
-            ScrollbarThumb {
-                axis: ScrollAxis::Horizontal,
-                content_entity,
-            },
-            Node {
-                position_type: PositionType::Absolute,
-                height: Val::Px(SCROLLBAR_SIZE),
-                min_width: Val::Px(SCROLLBAR_MIN_THUMB),
-                top: Val::Px(0.0),
-                left: Val::Px(0.0),
-                ..default()
-            },
-            BorderRadius::all(Val::Px(SCROLLBAR_SIZE / 2.0)),
-            BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
-        ))
-        .id();
-
-    commands
-        .spawn((
-            ScrollbarTrack {
-                axis: ScrollAxis::Horizontal,
-                content_entity,
-            },
-            ScrollbarVisibility::default(),
-            Node {
-                position_type: PositionType::Absolute,
-                height: Val::Px(SCROLLBAR_SIZE),
-                bottom: Val::Px(0.0),
-                left: Val::Px(0.0),
-                right: Val::Px(0.0),
-                ..default()
-            },
-            ChildOf(viewport_entity),
-        ))
-        .add_child(horiz_thumb);
+// 3. HELPER: find the ScrollableContent sibling of a track/thumb entity.
+// Walks: entity → parent (viewport) → children → find ScrollableContent.
+fn find_content_sibling(
+    viewport_entity: Entity,
+    children_query: &Query<&Children>,
+    content_marker: &Query<Entity, With<ScrollableContent>>,
+) -> Option<Entity> {
+    let children = children_query.get(viewport_entity).ok()?;
+    children
+        .iter()
+        .find(|&child| content_marker.contains(child))
 }
 
-// Triggered when the mouse wheel is scrolled over the entity
+// 4. SYSTEMS & OBSERVERS
+
+/// Triggered when ScrollableContent is added. Only attaches the scroll observer.
+fn attach_scroll_handlers(trigger: On<Add, ScrollableContent>, mut commands: Commands) {
+    commands.entity(trigger.entity).observe(on_scroll_event);
+}
+
+/// Triggered when the mouse wheel is scrolled over the content entity.
 fn on_scroll_event(
     trigger: On<Pointer<Scroll>>,
     mut query: Query<(&mut UiScrollPosition, &ComputedNode, &ChildOf)>,
@@ -217,21 +140,16 @@ fn on_scroll_event(
         let content_size = content_node.size();
         let viewport_size = viewport_node.size();
 
-        // Only allow scrolling when content overflows the viewport
         let max_scroll_x = (content_size.x - viewport_size.x).max(0.0);
         let max_scroll_y = (content_size.y - viewport_size.y).max(0.0);
 
-        // Adjust sensitivity (pixels per scroll line)
         const SCROLL_SENSITIVITY: f32 = 40.0;
 
         let mut dx = trigger.event().x;
         let mut dy = trigger.event().y;
 
-        // Shift+scroll redirects vertical scroll to horizontal (standard UX
-        // pattern). On Windows, the OS does not convert Shift+wheel to
-        // horizontal scroll, so we handle it here.
-        let shift_held =
-            keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
+        // Shift+scroll redirects vertical to horizontal (Windows doesn't do this natively)
+        let shift_held = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
         if shift_held && dx == 0.0 {
             dx = dy;
             dy = 0.0;
@@ -242,7 +160,7 @@ fn on_scroll_event(
     }
 }
 
-// Syncs the abstract ScrollPosition to the actual UI Node style
+/// Syncs UiScrollPosition to Node left/top offsets.
 fn update_scroll_layout(
     mut query: Query<
         (&mut UiScrollPosition, &mut Node, &ComputedNode, &ChildOf),
@@ -251,7 +169,6 @@ fn update_scroll_layout(
     parent_query: Query<&ComputedNode>,
 ) {
     for (mut pos, mut node, content_node, child_of) in query.iter_mut() {
-        // Clamp scroll position to actual overflow bounds
         if let Ok(viewport_node) = parent_query.get(child_of.parent()) {
             let content_size = content_node.size();
             let viewport_size = viewport_node.size();
@@ -268,31 +185,46 @@ fn update_scroll_layout(
             }
         }
 
-        // Move the content up/left by the scroll amount
         node.left = Val::Px(-pos.x);
         node.top = Val::Px(-pos.y);
     }
 }
 
-// Sizes and positions scrollbar thumbs based on content vs viewport sizes.
-// Hides tracks when there is no overflow.
+/// Sizes and positions scrollbar tracks and thumbs based on content vs viewport.
+/// Finds content entity dynamically via parent-child hierarchy (no stored references).
 fn update_scrollbar_layout(
-    content_query: Query<(&UiScrollPosition, &ComputedNode, &ChildOf)>,
-    viewport_query: Query<&ComputedNode>,
-    mut track_query: Query<(&ScrollbarTrack, &mut Node, &ComputedNode)>,
-    mut thumb_query: Query<(&ScrollbarThumb, &mut Node), Without<ScrollbarTrack>>,
+    track_query: Query<(Entity, &ScrollbarTrack, &ChildOf)>,
+    children_query: Query<&Children>,
+    content_marker: Query<Entity, With<ScrollableContent>>,
+    content_data: Query<(&UiScrollPosition, &ComputedNode)>,
+    viewport_computed: Query<&ComputedNode>,
+    mut node_query: Query<&mut Node>,
+    thumb_query: Query<(Entity, &ScrollbarThumb)>,
 ) {
-    for (track, mut track_node, track_computed) in track_query.iter_mut() {
-        let Ok((scroll_pos, content_node, child_of)) = content_query.get(track.content_entity)
+
+    for (track_entity, track, track_child_of) in track_query.iter() {
+        let viewport_entity = track_child_of.parent();
+
+        // Find the ScrollableContent sibling dynamically
+        let Some(content_entity) =
+            find_content_sibling(viewport_entity, &children_query, &content_marker)
         else {
-            continue;
-        };
-        let Ok(viewport_node) = viewport_query.get(child_of.parent()) else {
+            // No content sibling found — hide track
+            if let Ok(mut track_node) = node_query.get_mut(track_entity) {
+                track_node.display = Display::None;
+            }
             continue;
         };
 
-        let content_size = content_node.size();
-        let viewport_size = viewport_node.size();
+        let Ok((scroll_pos, content_computed)) = content_data.get(content_entity) else {
+            continue;
+        };
+        let Ok(vp_computed) = viewport_computed.get(viewport_entity) else {
+            continue;
+        };
+
+        let content_size = content_computed.size();
+        let viewport_size = vp_computed.size();
 
         let (content_len, viewport_len, scroll_val) = match track.axis {
             ScrollAxis::Vertical => (content_size.y, viewport_size.y, scroll_pos.y),
@@ -302,17 +234,28 @@ fn update_scrollbar_layout(
         let max_scroll = (content_len - viewport_len).max(0.0);
 
         // Hide track if no overflow
-        if max_scroll <= 0.0 {
-            track_node.display = Display::None;
+        if let Ok(mut track_node) = node_query.get_mut(track_entity) {
+            if max_scroll <= 0.0 {
+                track_node.display = Display::None;
+                continue;
+            }
+            track_node.display = Display::Flex;
+
+            // Explicitly size track to viewport dimensions
+            match track.axis {
+                ScrollAxis::Vertical => {
+                    track_node.height = Val::Px(viewport_size.y);
+                }
+                ScrollAxis::Horizontal => {
+                    track_node.width = Val::Px(viewport_size.x);
+                }
+            }
+        }
+
+        let track_len = viewport_len;
+        if track_len < SCROLLBAR_MIN_THUMB {
             continue;
         }
-        track_node.display = Display::Flex;
-
-        // Compute thumb size and position
-        let track_len = match track.axis {
-            ScrollAxis::Vertical => track_computed.size().y,
-            ScrollAxis::Horizontal => track_computed.size().x,
-        };
 
         let thumb_len =
             ((viewport_len / content_len) * track_len).clamp(SCROLLBAR_MIN_THUMB, track_len);
@@ -322,20 +265,26 @@ fn update_scrollbar_layout(
             0.0
         };
 
-        // Update matching thumb
-        for (thumb, mut thumb_node) in thumb_query.iter_mut() {
-            if thumb.content_entity == track.content_entity && thumb.axis == track.axis {
-                match thumb.axis {
-                    ScrollAxis::Vertical => {
-                        thumb_node.height = Val::Px(thumb_len);
-                        thumb_node.top = Val::Px(thumb_pos);
-                    }
-                    ScrollAxis::Horizontal => {
-                        thumb_node.width = Val::Px(thumb_len);
-                        thumb_node.left = Val::Px(thumb_pos);
+        // Find the thumb child of this track
+        if let Ok(track_children) = children_query.get(track_entity) {
+            for child in track_children.iter() {
+                if let Ok((_, thumb)) = thumb_query.get(child) {
+                    if thumb.axis == track.axis {
+                        if let Ok(mut thumb_node) = node_query.get_mut(child) {
+                            match thumb.axis {
+                                ScrollAxis::Vertical => {
+                                    thumb_node.height = Val::Px(thumb_len);
+                                    thumb_node.top = Val::Px(thumb_pos);
+                                }
+                                ScrollAxis::Horizontal => {
+                                    thumb_node.width = Val::Px(thumb_len);
+                                    thumb_node.left = Val::Px(thumb_pos);
+                                }
+                            }
+                        }
+                        break;
                     }
                 }
-                break;
             }
         }
     }
@@ -345,9 +294,8 @@ fn update_scrollbar_layout(
 
 /// When a ScrollbarThumb is added, attach drag and hover observers.
 fn attach_scrollbar_drag_handlers(trigger: On<Add, ScrollbarThumb>, mut commands: Commands) {
-    let thumb_entity = trigger.entity;
     commands
-        .entity(thumb_entity)
+        .entity(trigger.entity)
         .observe(on_thumb_drag_start)
         .observe(on_thumb_drag)
         .observe(on_thumb_drag_end)
@@ -355,15 +303,25 @@ fn attach_scrollbar_drag_handlers(trigger: On<Add, ScrollbarThumb>, mut commands
         .observe(on_thumb_hover_out);
 }
 
-/// When a ScrollbarTrack is added, attach click observer.
-fn attach_scrollbar_track_click(trigger: On<Add, ScrollbarTrack>, mut commands: Commands) {
-    let track_entity = trigger.entity;
-    commands.entity(track_entity).observe(on_track_click);
+/// Helper: from a thumb entity, walk up to find the content entity.
+/// thumb → parent (track) → parent (viewport) → find ScrollableContent child.
+fn find_content_from_thumb(
+    thumb_entity: Entity,
+    child_of_query: &Query<&ChildOf>,
+    children_query: &Query<&Children>,
+    content_marker: &Query<Entity, With<ScrollableContent>>,
+) -> Option<Entity> {
+    let track_entity = child_of_query.get(thumb_entity).ok()?.parent();
+    let viewport_entity = child_of_query.get(track_entity).ok()?.parent();
+    find_content_sibling(viewport_entity, children_query, content_marker)
 }
 
 fn on_thumb_drag_start(
     trigger: On<Pointer<DragStart>>,
     thumb_query: Query<&ScrollbarThumb>,
+    child_of_query: Query<&ChildOf>,
+    children_query: Query<&Children>,
+    content_marker: Query<Entity, With<ScrollableContent>>,
     scroll_query: Query<&UiScrollPosition>,
     mut track_query: Query<(&ScrollbarTrack, &mut ScrollbarVisibility)>,
     mut commands: Commands,
@@ -372,7 +330,15 @@ fn on_thumb_drag_start(
     let Ok(thumb) = thumb_query.get(thumb_entity) else {
         return;
     };
-    let Ok(scroll_pos) = scroll_query.get(thumb.content_entity) else {
+    let Some(content_entity) = find_content_from_thumb(
+        thumb_entity,
+        &child_of_query,
+        &children_query,
+        &content_marker,
+    ) else {
+        return;
+    };
+    let Ok(scroll_pos) = scroll_query.get(content_entity) else {
         return;
     };
 
@@ -382,18 +348,16 @@ fn on_thumb_drag_start(
         ScrollAxis::Horizontal => (scroll_pos.x, pointer_pos.x),
     };
 
-    commands
-        .entity(thumb_entity)
-        .insert(ScrollbarDragState {
-            start_scroll,
-            start_mouse,
-        });
+    commands.entity(thumb_entity).insert(ScrollbarDragState {
+        start_scroll,
+        start_mouse,
+    });
 
     // Set track to drag opacity
-    for (track, mut vis) in track_query.iter_mut() {
-        if track.content_entity == thumb.content_entity && track.axis == thumb.axis {
+    let track_entity = child_of_query.get(thumb_entity).map(|c| c.parent()).ok();
+    if let Some(track_entity) = track_entity {
+        if let Ok((_, mut vis)) = track_query.get_mut(track_entity) {
             vis.target_opacity = SCROLLBAR_DRAG_ALPHA;
-            break;
         }
     }
 }
@@ -401,19 +365,32 @@ fn on_thumb_drag_start(
 fn on_thumb_drag(
     trigger: On<Pointer<Drag>>,
     thumb_query: Query<(&ScrollbarThumb, &ScrollbarDragState)>,
-    mut scroll_query: Query<(&mut UiScrollPosition, &ComputedNode, &ChildOf)>,
+    child_of_query: Query<&ChildOf>,
+    children_query: Query<&Children>,
+    content_marker: Query<Entity, With<ScrollableContent>>,
+    mut scroll_query: Query<
+        (&mut UiScrollPosition, &ComputedNode, &ChildOf),
+        Without<ScrollbarThumb>,
+    >,
     viewport_query: Query<&ComputedNode, Without<UiScrollPosition>>,
-    track_query: Query<(&ScrollbarTrack, &ComputedNode), Without<UiScrollPosition>>,
 ) {
     let thumb_entity = trigger.entity;
     let Ok((thumb, drag_state)) = thumb_query.get(thumb_entity) else {
         return;
     };
-    let Ok((mut scroll_pos, content_node, child_of)) = scroll_query.get_mut(thumb.content_entity)
+    let Some(content_entity) = find_content_from_thumb(
+        thumb_entity,
+        &child_of_query,
+        &children_query,
+        &content_marker,
+    ) else {
+        return;
+    };
+    let Ok((mut scroll_pos, content_node, content_child_of)) = scroll_query.get_mut(content_entity)
     else {
         return;
     };
-    let Ok(viewport_node) = viewport_query.get(child_of.parent()) else {
+    let Ok(viewport_node) = viewport_query.get(content_child_of.parent()) else {
         return;
     };
 
@@ -430,26 +407,14 @@ fn on_thumb_drag(
         return;
     }
 
-    // Find matching track to get track length
-    let mut track_len = 0.0;
-    for (track, track_computed) in track_query.iter() {
-        if track.content_entity == thumb.content_entity && track.axis == thumb.axis {
-            track_len = match thumb.axis {
-                ScrollAxis::Vertical => track_computed.size().y,
-                ScrollAxis::Horizontal => track_computed.size().x,
-            };
-            break;
-        }
-    }
-
-    if track_len <= 0.0 {
+    let track_len = viewport_len;
+    if track_len < SCROLLBAR_MIN_THUMB {
         return;
     }
 
     let thumb_len =
         ((viewport_len / content_len) * track_len).clamp(SCROLLBAR_MIN_THUMB, track_len);
     let scrollable_track = track_len - thumb_len;
-
     if scrollable_track <= 0.0 {
         return;
     }
@@ -472,171 +437,94 @@ fn on_thumb_drag(
 
 fn on_thumb_drag_end(
     trigger: On<Pointer<DragEnd>>,
-    thumb_query: Query<&ScrollbarThumb>,
-    mut track_query: Query<(&ScrollbarTrack, &mut ScrollbarVisibility)>,
+    child_of_query: Query<&ChildOf>,
+    mut track_query: Query<&mut ScrollbarVisibility, With<ScrollbarTrack>>,
     mut commands: Commands,
     time: Res<Time>,
 ) {
     let thumb_entity = trigger.entity;
-    commands
-        .entity(thumb_entity)
-        .remove::<ScrollbarDragState>();
+    commands.entity(thumb_entity).remove::<ScrollbarDragState>();
 
-    let Ok(thumb) = thumb_query.get(thumb_entity) else {
-        return;
-    };
-
-    for (track, mut vis) in track_query.iter_mut() {
-        if track.content_entity == thumb.content_entity && track.axis == thumb.axis {
+    // Walk to parent track and update visibility
+    if let Ok(child_of) = child_of_query.get(thumb_entity) {
+        let track_entity = child_of.parent();
+        if let Ok(mut vis) = track_query.get_mut(track_entity) {
             vis.target_opacity = SCROLLBAR_IDLE_ALPHA;
             vis.last_activity = time.elapsed_secs();
-            break;
         }
-    }
-}
-
-fn on_track_click(
-    trigger: On<Pointer<Click>>,
-    track_query: Query<(&ScrollbarTrack, &ComputedNode, &GlobalTransform)>,
-    mut scroll_query: Query<(&mut UiScrollPosition, &ComputedNode, &ChildOf)>,
-    viewport_query: Query<&ComputedNode, Without<UiScrollPosition>>,
-) {
-    let track_entity = trigger.entity;
-    let Ok((track, track_computed, track_transform)) = track_query.get(track_entity) else {
-        return;
-    };
-    let Ok((mut scroll_pos, content_node, child_of)) = scroll_query.get_mut(track.content_entity)
-    else {
-        return;
-    };
-    let Ok(viewport_node) = viewport_query.get(child_of.parent()) else {
-        return;
-    };
-
-    let content_size = content_node.size();
-    let viewport_size = viewport_node.size();
-
-    let (content_len, viewport_len) = match track.axis {
-        ScrollAxis::Vertical => (content_size.y, viewport_size.y),
-        ScrollAxis::Horizontal => (content_size.x, viewport_size.x),
-    };
-
-    let max_scroll = (content_len - viewport_len).max(0.0);
-    if max_scroll <= 0.0 {
-        return;
-    }
-
-    let track_size = track_computed.size();
-    let track_len = match track.axis {
-        ScrollAxis::Vertical => track_size.y,
-        ScrollAxis::Horizontal => track_size.x,
-    };
-
-    if track_len <= 0.0 {
-        return;
-    }
-
-    // Get click position relative to track
-    let click_pos = trigger.event().pointer_location.position;
-    let track_global_pos = track_transform.translation().truncate();
-    // The track's global transform gives us the center; we need top-left.
-    // ComputedNode size is in logical pixels; transform is also in logical pixels for UI.
-    let track_top_left = track_global_pos - track_size * 0.5;
-
-    let relative_pos = match track.axis {
-        ScrollAxis::Vertical => click_pos.y - track_top_left.y,
-        ScrollAxis::Horizontal => click_pos.x - track_top_left.x,
-    };
-
-    // Scale by inverse_scale_factor to convert from screen to logical pixels
-    let isf = track_computed.inverse_scale_factor();
-    let relative_logical = relative_pos * isf;
-
-    let ratio = (relative_logical / track_len).clamp(0.0, 1.0);
-    let new_scroll = (ratio * max_scroll).clamp(0.0, max_scroll);
-
-    match track.axis {
-        ScrollAxis::Vertical => scroll_pos.y = new_scroll,
-        ScrollAxis::Horizontal => scroll_pos.x = new_scroll,
     }
 }
 
 fn on_thumb_hover_in(
     trigger: On<Pointer<Over>>,
-    thumb_query: Query<&ScrollbarThumb>,
-    mut track_query: Query<(&ScrollbarTrack, &mut ScrollbarVisibility)>,
+    child_of_query: Query<&ChildOf>,
+    mut track_query: Query<&mut ScrollbarVisibility, With<ScrollbarTrack>>,
 ) {
-    let thumb_entity = trigger.entity;
-    let Ok(thumb) = thumb_query.get(thumb_entity) else {
-        return;
-    };
-
-    for (track, mut vis) in track_query.iter_mut() {
-        if track.content_entity == thumb.content_entity && track.axis == thumb.axis {
+    if let Ok(child_of) = child_of_query.get(trigger.entity) {
+        if let Ok(mut vis) = track_query.get_mut(child_of.parent()) {
             vis.target_opacity = SCROLLBAR_HOVER_ALPHA;
-            break;
         }
     }
 }
 
 fn on_thumb_hover_out(
     trigger: On<Pointer<Out>>,
-    thumb_query: Query<&ScrollbarThumb>,
+    child_of_query: Query<&ChildOf>,
     drag_query: Query<&ScrollbarDragState>,
-    mut track_query: Query<(&ScrollbarTrack, &mut ScrollbarVisibility)>,
+    mut track_query: Query<&mut ScrollbarVisibility, With<ScrollbarTrack>>,
     time: Res<Time>,
 ) {
-    let thumb_entity = trigger.entity;
-    let Ok(thumb) = thumb_query.get(thumb_entity) else {
-        return;
-    };
-
     // Don't reduce opacity if currently dragging
-    if drag_query.get(thumb_entity).is_ok() {
+    if drag_query.get(trigger.entity).is_ok() {
         return;
     }
 
-    for (track, mut vis) in track_query.iter_mut() {
-        if track.content_entity == thumb.content_entity && track.axis == thumb.axis {
+    if let Ok(child_of) = child_of_query.get(trigger.entity) {
+        if let Ok(mut vis) = track_query.get_mut(child_of.parent()) {
             vis.target_opacity = SCROLLBAR_IDLE_ALPHA;
             vis.last_activity = time.elapsed_secs();
-            break;
         }
     }
 }
 
 // — Fade animation systems —
 
-/// When scroll position changes, mark matching tracks as active.
+/// When scroll position changes, mark sibling tracks as active.
 fn update_scrollbar_visibility_on_scroll(
-    changed_scroll: Query<Entity, Changed<UiScrollPosition>>,
-    mut track_query: Query<(&ScrollbarTrack, &mut ScrollbarVisibility)>,
+    changed_scroll: Query<(Entity, &ChildOf), (Changed<UiScrollPosition>, With<ScrollableContent>)>,
+    children_query: Query<&Children>,
+    mut track_query: Query<&mut ScrollbarVisibility, With<ScrollbarTrack>>,
     time: Res<Time>,
 ) {
-    for content_entity in changed_scroll.iter() {
-        for (track, mut vis) in track_query.iter_mut() {
-            if track.content_entity == content_entity {
-                vis.last_activity = time.elapsed_secs();
-                vis.target_opacity = SCROLLBAR_IDLE_ALPHA;
+    for (_, child_of) in changed_scroll.iter() {
+        let viewport_entity = child_of.parent();
+        if let Ok(children) = children_query.get(viewport_entity) {
+            for child in children.iter() {
+                if let Ok(mut vis) = track_query.get_mut(child) {
+                    vis.last_activity = time.elapsed_secs();
+                    vis.target_opacity = SCROLLBAR_IDLE_ALPHA;
+                }
             }
         }
     }
 }
 
-/// Lerps opacity toward target; triggers fade-out after delay (skips if dragging).
+/// Lerps opacity toward target; triggers fade-out after delay.
 fn tick_scrollbar_fade(
     time: Res<Time>,
-    mut track_query: Query<(&ScrollbarTrack, &mut ScrollbarVisibility)>,
-    drag_query: Query<(Entity, &ScrollbarThumb), With<ScrollbarDragState>>,
+    mut query: Query<(Entity, &mut ScrollbarVisibility), With<ScrollbarTrack>>,
+    children_query: Query<&Children>,
+    drag_query: Query<&ScrollbarDragState>,
 ) {
     let dt = time.delta_secs();
     let now = time.elapsed_secs();
 
-    for (track, mut vis) in track_query.iter_mut() {
-        // Check if any thumb for this track is being dragged
-        let is_dragging = drag_query.iter().any(|(_, thumb)| {
-            thumb.content_entity == track.content_entity && thumb.axis == track.axis
-        });
+    for (track_entity, mut vis) in query.iter_mut() {
+        // Check if any thumb child is being dragged
+        let is_dragging = children_query
+            .get(track_entity)
+            .map(|children| children.iter().any(|child| drag_query.get(child).is_ok()))
+            .unwrap_or(false);
 
         if !is_dragging && now - vis.last_activity > vis.fade_delay {
             vis.target_opacity = 0.0;
@@ -661,22 +549,24 @@ fn lerp_toward(current: f32, target: f32, max_delta: f32) -> f32 {
     }
 }
 
-/// Applies the track's visibility opacity to the thumb's BackgroundColor.
+/// Applies the track's visibility opacity to child thumb BackgroundColor.
 fn apply_scrollbar_opacity(
-    track_query: Query<(&ScrollbarTrack, &ScrollbarVisibility)>,
-    mut thumb_query: Query<(&ScrollbarThumb, &mut BackgroundColor)>,
+    track_query: Query<(Entity, &ScrollbarVisibility), With<ScrollbarTrack>>,
+    children_query: Query<&Children>,
+    mut bg_query: Query<&mut BackgroundColor, With<ScrollbarThumb>>,
 ) {
-    for (thumb, mut bg) in thumb_query.iter_mut() {
-        for (track, vis) in track_query.iter() {
-            if track.content_entity == thumb.content_entity && track.axis == thumb.axis {
-                bg.0 = Color::srgba(1.0, 1.0, 1.0, vis.opacity);
-                break;
+    for (track_entity, vis) in track_query.iter() {
+        if let Ok(children) = children_query.get(track_entity) {
+            for child in children.iter() {
+                if let Ok(mut bg) = bg_query.get_mut(child) {
+                    bg.0 = Color::srgba(1.0, 1.0, 1.0, vis.opacity);
+                }
             }
         }
     }
 }
 
-// 4. THE FLUENT API
+// 5. THE FLUENT API
 
 pub trait ImmUiScrollExt<Cap> {
     fn scrollarea(
@@ -698,16 +588,13 @@ where
         content: impl FnOnce(&mut Imm<'_, '_, Cap>),
     ) -> Self {
         self
-            // Outer Container (The Window)
+            // Outer Container (The Viewport)
             .style(|n| {
                 n.display = Display::Flex;
-                // Critical: Clip content that moves outside
                 n.overflow = Overflow::clip();
             })
             .add(|ui| {
                 // Inner Container (The Moving Content)
-                // flex_shrink: 0 ensures content keeps its natural size
-                // and can overflow the parent (which clips it)
                 ui.ch()
                     .style(|n| {
                         n.flex_shrink = 0.0;
@@ -715,6 +602,78 @@ where
                     .style(inner_style_fn)
                     .on_spawn_insert(|| (UiScrollPosition::default(), ScrollableContent))
                     .add(content);
+
+                // Vertical scrollbar track + thumb (immediate-mode, recreated each frame)
+                ui.ch()
+                    .style(|n| {
+                        n.position_type = PositionType::Absolute;
+                        n.width = Val::Px(SCROLLBAR_SIZE);
+                        n.right = Val::Px(0.0);
+                        n.top = Val::Px(0.0);
+                    })
+                    .on_spawn_insert(|| {
+                        (
+                            ScrollbarTrack {
+                                axis: ScrollAxis::Vertical,
+                            },
+                            ScrollbarVisibility::default(),
+                        )
+                    })
+                    .add(|ui| {
+                        ui.ch()
+                            .style(|n| {
+                                n.position_type = PositionType::Absolute;
+                                n.width = Val::Px(SCROLLBAR_SIZE);
+                                n.min_height = Val::Px(SCROLLBAR_MIN_THUMB);
+                                n.top = Val::Px(0.0);
+                                n.left = Val::Px(0.0);
+                            })
+                            .on_spawn_insert(|| {
+                                (
+                                    ScrollbarThumb {
+                                        axis: ScrollAxis::Vertical,
+                                    },
+                                    BorderRadius::all(Val::Px(SCROLLBAR_SIZE / 2.0)),
+                                    BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
+                                )
+                            });
+                    });
+
+                // Horizontal scrollbar track + thumb
+                ui.ch()
+                    .style(|n| {
+                        n.position_type = PositionType::Absolute;
+                        n.height = Val::Px(SCROLLBAR_SIZE);
+                        n.bottom = Val::Px(0.0);
+                        n.left = Val::Px(0.0);
+                    })
+                    .on_spawn_insert(|| {
+                        (
+                            ScrollbarTrack {
+                                axis: ScrollAxis::Horizontal,
+                            },
+                            ScrollbarVisibility::default(),
+                        )
+                    })
+                    .add(|ui| {
+                        ui.ch()
+                            .style(|n| {
+                                n.position_type = PositionType::Absolute;
+                                n.height = Val::Px(SCROLLBAR_SIZE);
+                                n.min_width = Val::Px(SCROLLBAR_MIN_THUMB);
+                                n.top = Val::Px(0.0);
+                                n.left = Val::Px(0.0);
+                            })
+                            .on_spawn_insert(|| {
+                                (
+                                    ScrollbarThumb {
+                                        axis: ScrollAxis::Horizontal,
+                                    },
+                                    BorderRadius::all(Val::Px(SCROLLBAR_SIZE / 2.0)),
+                                    BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
+                                )
+                            });
+                    });
             })
     }
 
