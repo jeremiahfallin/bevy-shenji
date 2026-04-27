@@ -231,8 +231,7 @@ fn render_squad_card(
                 .add(|ui| {
                     if let Some(selected_id) = selected_member {
                         if let Some(&entity) = squad_state.characters.get(selected_id) {
-                            if let Ok((info, _skills, action_state)) = char_query.get(entity)
-                            {
+                            if let Ok((info, _skills, action_state)) = char_query.get(entity) {
                                 let gather_locations: Vec<(String, String, String)> =
                                     location_query
                                         .iter()
@@ -945,18 +944,14 @@ fn render_job_queue_panel(
                     ui.ch()
                         .button()
                         .style(|n: &mut Node| {
-                            n.padding = UiRect::axes(
-                                Val::Px(SPACE_3),
-                                Val::Px(SPACE_1_5),
-                            );
+                            n.padding = UiRect::axes(Val::Px(SPACE_3), Val::Px(SPACE_1_5));
                         })
                         .bg(GRAY_800)
                         .border(BORDER_WIDTH_DEFAULT)
                         .border_color(GRAY_700)
                         .rounded(RADIUS_DEFAULT)
                         .on_click_once(
-                            move |_: On<Pointer<Click>>,
-                                  mut inspector: ResMut<InspectorState>| {
+                            move |_: On<Pointer<Click>>, mut inspector: ResMut<InspectorState>| {
                                 inspector.job_picker_mode = JobPickerMode::None;
                             },
                         )
