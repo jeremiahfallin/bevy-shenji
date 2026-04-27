@@ -87,10 +87,7 @@ impl Plugin for ScrollWidgetPlugin {
         // Size and position scrollbar thumbs each frame.
         // Runs in Update so Node changes are applied BEFORE PostUpdate layout.
         // ComputedNode from the previous frame provides valid viewport/content sizes.
-        app.add_systems(
-            Update,
-            update_scrollbar_layout.after(update_scroll_layout),
-        );
+        app.add_systems(Update, update_scrollbar_layout.after(update_scroll_layout));
         // Fade animation
         app.add_systems(
             Update,
@@ -201,7 +198,6 @@ fn update_scrollbar_layout(
     mut node_query: Query<&mut Node>,
     thumb_query: Query<(Entity, &ScrollbarThumb)>,
 ) {
-
     for (track_entity, track, track_child_of) in track_query.iter() {
         let viewport_entity = track_child_of.parent();
 
@@ -627,13 +623,13 @@ where
                                 n.min_height = Val::Px(SCROLLBAR_MIN_THUMB);
                                 n.top = Val::Px(0.0);
                                 n.left = Val::Px(0.0);
+                                n.border_radius = BorderRadius::all(Val::Px(SCROLLBAR_SIZE / 2.0));
                             })
                             .on_spawn_insert(|| {
                                 (
                                     ScrollbarThumb {
                                         axis: ScrollAxis::Vertical,
                                     },
-                                    BorderRadius::all(Val::Px(SCROLLBAR_SIZE / 2.0)),
                                     BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
                                 )
                             });
@@ -663,13 +659,13 @@ where
                                 n.min_width = Val::Px(SCROLLBAR_MIN_THUMB);
                                 n.top = Val::Px(0.0);
                                 n.left = Val::Px(0.0);
+                                n.border_radius = BorderRadius::all(Val::Px(SCROLLBAR_SIZE / 2.0));
                             })
                             .on_spawn_insert(|| {
                                 (
                                     ScrollbarThumb {
                                         axis: ScrollAxis::Horizontal,
                                     },
-                                    BorderRadius::all(Val::Px(SCROLLBAR_SIZE / 2.0)),
                                     BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
                                 )
                             });

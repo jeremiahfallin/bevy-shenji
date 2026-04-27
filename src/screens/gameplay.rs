@@ -74,7 +74,7 @@ fn spawn_pause_overlay(mut commands: Commands, ui_root: Res<UiRoot>) {
 }
 
 fn unpause(mut next_pause: ResMut<NextState<Pause>>, mut sim: ResMut<SimulationState>) {
-    next_pause.set(Pause(false));
+    NextState::set_if_neq(&mut next_pause, Pause(false));
     // Restore simulation to the speed it was running at before pause.
     if sim.is_paused() {
         let prev = sim.previous_speed.max(1);
@@ -83,7 +83,7 @@ fn unpause(mut next_pause: ResMut<NextState<Pause>>, mut sim: ResMut<SimulationS
 }
 
 fn pause(mut next_pause: ResMut<NextState<Pause>>, mut sim: ResMut<SimulationState>) {
-    next_pause.set(Pause(true));
+    NextState::set_if_neq(&mut next_pause, Pause(true));
     sim.pause();
 }
 
@@ -92,5 +92,5 @@ fn open_pause_menu(mut next_menu: ResMut<NextState<Menu>>) {
 }
 
 fn close_menu(mut next_menu: ResMut<NextState<Menu>>) {
-    next_menu.set(Menu::None);
+    NextState::set_if_neq(&mut next_menu, Menu::None);
 }

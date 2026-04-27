@@ -2,8 +2,8 @@
 //! Exposes game state inspection and screenshot capture over HTTP (port 15702).
 
 use bevy::prelude::*;
-use bevy::remote::{http::RemoteHttpPlugin, BrpError, RemotePlugin};
-use bevy::render::view::window::screenshot::{save_to_disk, Screenshot};
+use bevy::remote::{BrpError, RemotePlugin, http::RemoteHttpPlugin};
+use bevy::render::view::window::screenshot::{Screenshot, save_to_disk};
 use serde_json::Value;
 
 use crate::game::resources::UiState;

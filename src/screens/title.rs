@@ -15,9 +15,9 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 fn open_main_menu(mut next_menu: ResMut<NextState<Menu>>) {
-    next_menu.set(Menu::Main);
+    NextState::set_if_neq(&mut next_menu, Menu::Main);
 }
 
 fn close_menu(mut next_menu: ResMut<NextState<Menu>>) {
-    next_menu.set(Menu::None);
+    NextState::set_if_neq(&mut next_menu, Menu::None);
 }

@@ -5,8 +5,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "0.17.3", features = ["hotpatching", "experimental_bevy_ui_widgets"] }
-bevy_immediate = { version = "0.4", features = ["hotpatching"] }
+bevy = { version = "0.18", features = ["hotpatching", "experimental_bevy_ui_widgets"] }
+bevy_immediate = { version = "0.5", features = ["hotpatching"] }
 lucide-icons = "0.563.0"
 
 rand = "0.9"

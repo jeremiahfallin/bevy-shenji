@@ -3,6 +3,7 @@ use bevy_immediate::ui::text::CapabilityUiText;
 use bevy_immediate::{CapSet, Imm, ImmEntity, ImplCap};
 
 use crate::theme::prelude::*;
+use crate::theme::widgets::label::FontWeight;
 
 // -----------------------------------------------------------------------------
 // Modal / Dialog Widget

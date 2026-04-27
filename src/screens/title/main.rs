@@ -52,6 +52,7 @@ impl ImmediateAttach<CapsUi> for MainMenu {
                                 justify: Justify::Center,
                                 ..default()
                             },
+                            LINE_HEIGHT_NORMAL,
                         )
                     }
                 })

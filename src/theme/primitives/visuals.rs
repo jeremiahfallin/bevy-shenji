@@ -13,7 +13,6 @@ impl ImmCapability for CapabilityUiVisuals {
         cap_req.request_component_write::<BackgroundColor>(app.world_mut());
         cap_req.request_component_write::<BorderColor>(app.world_mut());
         cap_req.request_component_write::<Outline>(app.world_mut());
-        cap_req.request_component_write::<BorderRadius>(app.world_mut());
         cap_req.request_component_write::<ZIndex>(app.world_mut());
         cap_req.request_component_write::<BoxShadow>(app.world_mut());
     }
@@ -80,27 +79,15 @@ where
         self.style(|s| s.border = UiRect::all(Val::Px(width)))
     }
 
-    fn rounded(mut self, val: f32) -> Self {
-        if let Ok(Some(mut radius)) = self.cap_get_component_mut::<BorderRadius>() {
-            *radius = BorderRadius::all(Val::Px(val));
-        } else {
-            self.entity_commands()
-                .insert(BorderRadius::all(Val::Px(val)));
-        }
-        self
+    fn rounded(self, val: f32) -> Self {
+        self.style(|n| n.border_radius = BorderRadius::all(Val::Px(val)))
     }
 
     fn rounded_md(self) -> Self {
         self.rounded(6.0)
     }
-    fn rounded_full(mut self) -> Self {
-        if let Ok(Some(mut radius)) = self.cap_get_component_mut::<BorderRadius>() {
-            *radius = BorderRadius::all(Val::Percent(50.0));
-        } else {
-            self.entity_commands()
-                .insert(BorderRadius::all(Val::Percent(50.0)));
-        }
-        self
+    fn rounded_full(self) -> Self {
+        self.style(|n| n.border_radius = BorderRadius::all(Val::Percent(50.0)))
     }
 
     fn opacity(mut self, val: f32) -> Self {

@@ -67,8 +67,7 @@ impl ImmediateAttach<CapsUi> for CharactersView {
                                             ui.ch().label(character.name.clone());
                                         });
                                         row.td(|ui| {
-                                            ui.ch()
-                                                .label(format!("{}", character.race.clone()));
+                                            ui.ch().label(format!("{}", character.race.clone()));
                                         });
                                         row.td(|ui| {
                                             ui.ch()

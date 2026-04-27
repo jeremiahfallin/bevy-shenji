@@ -1,12 +1,12 @@
 # Shenji
 
-A 2D management/strategy game built with **Rust** and **Bevy 0.17**.
+A 2D management/strategy game built with **Rust** and **Bevy 0.18**.
 
 ## Quick Reference
 
 - **Language**: Rust (Edition 2024, nightly-2025-06-26)
-- **Engine**: Bevy 0.17.3 with `hotpatching` and `experimental_bevy_ui_widgets`
-- **UI Framework**: bevy_immediate 0.4 (immediate-mode, trait-based capabilities)
+- **Engine**: Bevy 0.18 with `hotpatching` and `experimental_bevy_ui_widgets`
+- **UI Framework**: bevy_immediate 0.5 (immediate-mode, trait-based capabilities)
 - **Build Tool**: Bevy CLI (`bevy run` / `bevy build`)
 - **Package Manager**: Cargo
 
