@@ -619,6 +619,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_declarative"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "bevy_derive"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4682,6 +4689,7 @@ name = "shenji"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_declarative",
  "bevy_immediate",
  "getrandom",
  "lucide-icons",
