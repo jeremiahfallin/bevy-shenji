@@ -1,10 +1,6 @@
 use bevy::prelude::*;
-use bevy::text::LineHeight;
 use bevy_immediate::ui::CapsUi;
 use bevy_immediate::{CapSet, ImmCapAccessRequests, ImmCapability, ImmEntity, ImplCap};
-
-/// Default LineHeight for Bevy 0.18 — required component on Text spawns.
-pub const DEFAULT_LINE_HEIGHT: LineHeight = LineHeight::RelativeToFont(1.5);
 
 // 1. Define the Capability
 pub struct CapabilityUiTextStyle;

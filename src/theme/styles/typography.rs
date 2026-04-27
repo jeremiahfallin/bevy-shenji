@@ -17,6 +17,13 @@ pub const LEADING_NORMAL: f32 = 1.5;
 /// Relaxed line height — long-form text.
 pub const LEADING_RELAXED: f32 = 1.75;
 
+use bevy::text::LineHeight;
+
+/// Default line height for body and heading text — matches CSS `line-height: 1.5`
+/// semantics by multiplying the per-glyph font size. Use this on every Text spawn
+/// in Bevy 0.18+ where a `LineHeight` component is required.
+pub const LINE_HEIGHT_NORMAL: LineHeight = LineHeight::RelativeToFont(LEADING_NORMAL);
+
 // ── Typography preset functions ────────────────────────────────────────────
 //
 // These are style functions matching the pattern in buttons.rs / containers.rs.
