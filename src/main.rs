@@ -14,11 +14,13 @@ mod game;
 mod menus;
 mod screens;
 mod theme;
+mod ui;
 
 use crate::app_caps::AppCaps;
 use crate::theme::prelude::*;
 use bevy::{asset::AssetMetaCheck, prelude::*};
 
+use bevy_declarative::BevyDeclarativePlugin;
 use bevy_immediate::BevyImmediatePlugin;
 
 fn main() -> AppExit {
@@ -49,7 +51,8 @@ impl Plugin for AppPlugin {
                     ..default()
                 }),
         )
-        .add_plugins(BevyImmediatePlugin::<AppCaps>::default());
+        .add_plugins(BevyImmediatePlugin::<AppCaps>::default())
+        .add_plugins(BevyDeclarativePlugin);
 
         // Add other plugins.
         app.add_plugins((
@@ -63,6 +66,7 @@ impl Plugin for AppPlugin {
             menus::plugin,
             screens::plugin,
             theme::plugin,
+            ui::plugin,
         ));
 
         // Order new `AppSystems` variants by adding them here:
