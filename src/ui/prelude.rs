@@ -10,3 +10,4 @@ pub use crate::ui::tokens::typography::*;
 
 pub use crate::ui::presets::buttons::*;
 pub use crate::ui::presets::containers::*;
+pub use crate::ui::presets::text::*;
