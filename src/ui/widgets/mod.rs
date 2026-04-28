@@ -1,1 +1,1 @@
-//! Stub — populated by subsequent plan tasks.
+pub mod badge;
