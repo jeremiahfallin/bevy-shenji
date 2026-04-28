@@ -14,6 +14,6 @@ pub mod widgets;
 
 use bevy::prelude::*;
 
-pub fn plugin(_app: &mut App) {
-    // Submodule plugins register themselves here as they are implemented.
+pub fn plugin(app: &mut App) {
+    app.add_plugins(widgets::checkbox::plugin);
 }

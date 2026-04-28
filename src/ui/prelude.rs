@@ -13,6 +13,7 @@ pub use crate::ui::presets::containers::*;
 pub use crate::ui::presets::text::*;
 
 pub use crate::ui::widgets::badge::*;
+pub use crate::ui::widgets::checkbox::*;
 pub use crate::ui::widgets::divider::*;
 pub use crate::ui::widgets::icon::*;
 pub use crate::ui::widgets::label::*;
