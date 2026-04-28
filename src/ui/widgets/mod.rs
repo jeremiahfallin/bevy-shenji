@@ -5,4 +5,5 @@ pub mod icon;
 pub mod label;
 pub mod progress_bar;
 pub mod radio;
+pub mod slider;
 pub mod tooltip;

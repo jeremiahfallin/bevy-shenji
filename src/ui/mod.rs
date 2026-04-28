@@ -17,4 +17,5 @@ use bevy::prelude::*;
 pub fn plugin(app: &mut App) {
     app.add_plugins(widgets::checkbox::plugin);
     app.add_plugins(widgets::radio::plugin);
+    app.add_plugins(widgets::slider::plugin);
 }
