@@ -17,3 +17,4 @@ pub use crate::ui::widgets::divider::*;
 pub use crate::ui::widgets::icon::*;
 pub use crate::ui::widgets::label::*;
 pub use crate::ui::widgets::progress_bar::*;
+pub use crate::ui::widgets::tooltip::*;
