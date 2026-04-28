@@ -14,6 +14,7 @@ mod game;
 mod menus;
 mod screens;
 mod theme;
+mod ui;
 
 use crate::app_caps::AppCaps;
 use crate::theme::prelude::*;
@@ -65,6 +66,7 @@ impl Plugin for AppPlugin {
             menus::plugin,
             screens::plugin,
             theme::plugin,
+            ui::plugin,
         ));
 
         // Order new `AppSystems` variants by adding them here:
