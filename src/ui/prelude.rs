@@ -13,3 +13,4 @@ pub use crate::ui::presets::containers::*;
 pub use crate::ui::presets::text::*;
 
 pub use crate::ui::widgets::badge::*;
+pub use crate::ui::widgets::divider::*;
