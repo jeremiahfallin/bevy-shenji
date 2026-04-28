@@ -20,6 +20,7 @@ pub use crate::ui::widgets::label::*;
 pub use crate::ui::widgets::progress_bar::*;
 pub use crate::ui::widgets::radio::*;
 pub use crate::ui::widgets::slider::*;
+pub use crate::ui::widgets::text_input::*;
 pub use crate::ui::widgets::tooltip::*;
 
 pub use crate::ui::components::scroll_view::*;
