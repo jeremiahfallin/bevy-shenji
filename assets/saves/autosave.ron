@@ -9,8 +9,8 @@
     ),
     squad_state: (
         characters: {
-            "char_2": 8589934496,
-            "char_1": 8589934491,
+            "char_2": 12884901768,
+            "char_1": 12884901770,
         },
         squads: {
             1: (
@@ -50,7 +50,7 @@
         research_progress: 0,
     )),
     simulation_state: Some((
-        game_time: 868,
+        game_time: 1042,
         game_days: 1,
         ticks_per_day: 600,
         speed: 1,
@@ -60,9 +60,9 @@
         items: {
             "stone": 10,
             "zeni": 1000,
-            "bread": 20,
             "books": 5,
             "lumber": 10,
+            "bread": 20,
         },
     )),
     characters: [
@@ -81,7 +81,7 @@
                 right_arm: 100,
                 left_leg: 100,
                 right_leg: 100,
-                hunger: 14,
+                hunger: 0,
             ),
             skills: (
                 armor_smith: 0,
@@ -158,7 +158,7 @@
                 right_arm: 100,
                 left_leg: 100,
                 right_leg: 100,
-                hunger: 14,
+                hunger: 0,
             ),
             skills: (
                 armor_smith: 0,

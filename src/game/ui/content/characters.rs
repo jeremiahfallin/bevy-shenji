@@ -27,7 +27,7 @@ impl ImmediateAttach<CapsUi> for CharactersView {
             .h_full()
             .overflow_clip()
             .add(|ui| {
-                ui.ch().flex_1().scrollarea(
+                ui.ch().scrollarea(
                     |n| {
                         n.display = Display::Flex;
                         n.flex_direction = FlexDirection::Column;
@@ -85,6 +85,18 @@ impl ImmediateAttach<CapsUi> for CharactersView {
                         });
                     },
                 );
+            })
+            .style(|n| {
+                n.display = Display::Flex;
+                n.overflow = Overflow::clip();
+
+                n.flex_grow = 1.0;
+                n.flex_shrink = 1.0;
+
+                n.width = Val::Percent(100.0);
+                n.height = Val::Percent(100.0);
+                n.min_width = Val::Px(0.0);
+                n.min_height = Val::Px(0.0);
             });
     }
 }
