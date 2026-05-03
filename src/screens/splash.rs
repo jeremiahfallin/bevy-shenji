@@ -4,17 +4,11 @@ use bevy::{
     prelude::*,
 };
 
-use bevy_immediate::{
-    Imm,
-    attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::CapsUi,
-};
+use bevy_declarative::prelude::*;
 
-use crate::{AppSystems, UiRoot, screens::Screen, theme::prelude::*};
+use crate::{AppSystems, UiRoot, screens::Screen};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(BevyImmediateAttachPlugin::<CapsUi, SplashScreen>::new());
-
     // Resources & Systems
     app.insert_resource(ClearColor(SPLASH_BACKGROUND_COLOR));
     app.add_systems(OnEnter(Screen::Splash), spawn_splash_screen);
@@ -54,62 +48,44 @@ const SPLASH_FADE_DURATION_SECS: f32 = 0.6;
 #[derive(Component)]
 pub struct SplashScreen;
 
-impl ImmediateAttach<CapsUi> for SplashScreen {
-    // We need the AssetServer to load the image
-    type Params = Res<'static, AssetServer>;
+fn spawn_splash_screen(
+    mut commands: Commands,
+    ui_root: Res<UiRoot>,
+    asset_server: Res<AssetServer>,
+) {
+    let image_handle = asset_server.load_with_settings(
+        "images/splash.png",
+        |settings: &mut ImageLoaderSettings| {
+            settings.sampler = ImageSampler::linear();
+        },
+    );
 
-    fn construct(ui: &mut Imm<CapsUi>, asset_server: &mut Res<AssetServer>) {
-        // Splash Image
-        ui.ch()
-            .on_spawn_insert(|| {
-                (
-                    Name::new("Splash image"),
-                    // Logic: The Image
-                    ImageNode::new(asset_server.load_with_settings(
-                        "images/splash.png",
-                        |settings: &mut ImageLoaderSettings| {
-                            settings.sampler = ImageSampler::linear();
-                        },
-                    )),
-                    // Logic: The Animation Component
-                    ImageNodeFadeInOut {
-                        total_duration: SPLASH_DURATION_SECS,
-                        fade_duration: SPLASH_FADE_DURATION_SECS,
-                        t: 0.0,
-                    },
-                    // Style: Defined in CSS now!
-                    Node::default(),
-                )
-            })
-            .m_auto()
-            .w_percent(70.0);
-    }
-}
-
-fn spawn_splash_screen(mut commands: Commands, ui_root: Res<UiRoot>) {
-    let splash = commands
-        .spawn((
+    let splash = div()
+        .w_full()
+        .h_full()
+        .items_center()
+        .justify_center()
+        .bg(SPLASH_BACKGROUND_COLOR)
+        .insert((
             SplashScreen,
-            (
-                Name::new("Splash Screen"),
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-            ),
-            // Background color is handled by ClearColor resource, but we can add it here if needed
-            BackgroundColor(SPLASH_BACKGROUND_COLOR),
+            Name::new("Splash Screen"),
             DespawnOnExit(Screen::Splash),
         ))
+        .child(div().w(Val::Percent(70.0)).m(Val::Auto).insert((
+            Name::new("Splash image"),
+            ImageNode::new(image_handle),
+            ImageNodeFadeInOut {
+                total_duration: SPLASH_DURATION_SECS,
+                fade_duration: SPLASH_FADE_DURATION_SECS,
+                t: 0.0,
+            },
+        )))
+        .spawn(&mut commands)
         .id();
+
     commands.entity(ui_root.0).add_child(splash);
 }
 
-// ... [Keep ImageNodeFadeInOut struct, impl, and all systems exactly the same] ...
-// (Omitted for brevity, paste the rest of your existing file here)
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 struct ImageNodeFadeInOut {
