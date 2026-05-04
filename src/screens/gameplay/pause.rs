@@ -1,17 +1,13 @@
+//! The Pause menu (shown over Gameplay).
+
 use bevy::input::common_conditions::input_just_pressed;
 use bevy::prelude::*;
+use bevy_declarative::prelude::px;
 
-use bevy_immediate::{
-    Imm,
-    attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::CapsUi,
-};
-
-use crate::theme::prelude::*;
-use crate::{menus::Menu, screens::Screen};
+use crate::ui::prelude::*;
+use crate::{UiRoot, menus::Menu, screens::Screen};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(BevyImmediateAttachPlugin::<CapsUi, PauseMenu>::new());
     app.add_systems(OnEnter(Menu::Pause), spawn_pause_menu);
     app.add_systems(
         Update,
@@ -22,54 +18,29 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component)]
 pub struct PauseMenu;
 
-impl ImmediateAttach<CapsUi> for PauseMenu {
-    type Params = ();
-
-    fn construct(ui: &mut Imm<CapsUi>, _: &mut ()) {
-        ui.ch().header("Game Paused");
-
-        // Continue
-        let mut btn = ui.ch().button();
-        btn.entity_commands().observe(close_menu);
-        btn.add(|ui| {
-            ui.ch().label("Continue");
-        });
-
-        // Settings
-        let mut btn = ui.ch().button();
-        btn.entity_commands().observe(open_settings_menu);
-        btn.add(|ui| {
-            ui.ch().label("Settings");
-        });
-
-        // Quit
-        let mut btn = ui.ch().button();
-        btn.entity_commands().observe(quit_to_title);
-        btn.add(|ui| {
-            ui.ch().label("Quit to Title");
-        });
-    }
-}
-
-fn spawn_pause_menu(mut commands: Commands) {
-    commands.spawn((
-        PauseMenu,
-        (
+fn spawn_pause_menu(mut commands: Commands, ui_root: Res<UiRoot>) {
+    let root = div()
+        .col()
+        .items_center()
+        .justify_center()
+        .w(Val::Percent(100.0))
+        .h(Val::Percent(100.0))
+        .gap_y(px(SPACE_4))
+        .insert((
+            PauseMenu,
             Name::new("Pause Menu"),
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                flex_direction: FlexDirection::Column,
-                ..default()
-            },
-        ),
-        DespawnOnExit(Menu::Pause),
-    ));
+            DespawnOnExit(Menu::Pause),
+        ))
+        .child(heading_2("Game Paused"))
+        .child(btn_primary("Continue").on_click(close_menu))
+        .child(btn_primary("Settings").on_click(open_settings_menu))
+        .child(btn_primary("Quit to Title").on_click(quit_to_title));
+
+    let menu = root.spawn(&mut commands).id();
+    commands.entity(ui_root.0).add_child(menu);
 }
 
-// --- Actions (Unchanged) ---
+// --- Actions ---
 
 fn open_settings_menu(_: On<Pointer<Click>>, mut next_menu: ResMut<NextState<Menu>>) {
     next_menu.set(Menu::Settings);
