@@ -1,93 +1,94 @@
+//! The Settings menu (shown over Title or Pause).
+
 use bevy::audio::Volume;
 use bevy::input::common_conditions::input_just_pressed;
 use bevy::prelude::*;
+use bevy_declarative::prelude::px;
 
-use bevy_immediate::{
-    Imm,
-    attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::CapsUi,
-};
-
-use crate::theme::prelude::*;
-use crate::{menus::Menu, screens::Screen};
+use crate::ui::prelude::*;
+use crate::{UiRoot, menus::Menu, screens::Screen};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(BevyImmediateAttachPlugin::<CapsUi, SettingsMenu>::new());
     app.add_systems(OnEnter(Menu::Settings), spawn_settings_menu);
     app.add_systems(
         Update,
-        go_back.run_if(in_state(Menu::Settings).and(input_just_pressed(KeyCode::Escape))),
+        (
+            update_volume_percent.run_if(in_state(Menu::Settings)),
+            go_back.run_if(in_state(Menu::Settings).and(input_just_pressed(KeyCode::Escape))),
+        ),
     );
 }
 
 #[derive(Component)]
 pub struct SettingsMenu;
 
-impl ImmediateAttach<CapsUi> for SettingsMenu {
-    // Note: 'static is required for the SystemParam definition
-    type Params = Res<'static, GlobalVolume>;
+/// Marker for the dynamic percent label inside the volume row.
+#[derive(Component)]
+struct VolumePercentText;
 
-    fn construct(ui: &mut Imm<CapsUi>, global_volume: &mut Res<GlobalVolume>) {
-        // Child 1: Header
-        ui.ch().header("Settings");
-
-        // Child 2: Grid Container
-        ui.ch().apply(style_grid_2col).add(|ui| {
-            // Grid Item 1: Label
-            ui.ch().label("Master Volume");
-
-            // Grid Item 2: Controls
-            ui.ch()
-                .flex_row()
-                .column_gap(SPACE_2_5)
-                .items_center()
-                .add(|ui| {
-                    let mut btn = ui.ch().button();
-                    btn.entity_commands().observe(lower_global_volume);
-                    btn.add(|ui| {
-                        ui.ch().label("-");
-                    });
-
-                    // Dynamic Text
-                    let percent = global_volume.volume.to_linear() * 100.0;
-                    let text = format!("{percent:3.0}%");
-
-                    ui.ch().label(text);
-
-                    let mut btn = ui.ch().button();
-                    btn.entity_commands().observe(raise_global_volume);
-                    btn.add(|ui| {
-                        ui.ch().label("+");
-                    });
-                });
-        });
-
-        // Child 3: Back Button
-        let mut btn = ui.ch().button();
-        btn.entity_commands().observe(go_back_on_click);
-        btn.add(|ui| {
-            ui.ch().label("Back");
-        });
-    }
+fn format_percent(global_volume: &GlobalVolume) -> String {
+    let percent = global_volume.volume.to_linear() * 100.0;
+    format!("{percent:3.0}%")
 }
 
-fn spawn_settings_menu(mut commands: Commands) {
-    commands.spawn((
-        SettingsMenu,
-        // Important: This entity MUST be a Node for bevy_flair to handle its children
-        (
+fn spawn_settings_menu(
+    mut commands: Commands,
+    ui_root: Res<UiRoot>,
+    global_volume: Res<GlobalVolume>,
+) {
+    let initial_percent = format_percent(&global_volume);
+
+    let root = div()
+        .col()
+        .items_center()
+        .justify_center()
+        .w(Val::Percent(100.0))
+        .h(Val::Percent(100.0))
+        .gap_y(px(SPACE_4))
+        .insert((
+            SettingsMenu,
             Name::new("Settings Menu"),
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                flex_direction: FlexDirection::Column,
-                ..default()
-            },
-        ),
-        DespawnOnExit(Menu::Settings),
-    ));
+            DespawnOnExit(Menu::Settings),
+        ))
+        // Header
+        .child(heading_2("Settings"))
+        // Volume row: label + [- nn% +]
+        .child(
+            div()
+                .flex()
+                .row()
+                .items_center()
+                .gap_x(px(SPACE_6))
+                .child(label("Master Volume"))
+                .child(
+                    div()
+                        .flex()
+                        .row()
+                        .items_center()
+                        .gap_x(px(SPACE_2_5))
+                        .child(btn_ghost("-").on_click(lower_global_volume))
+                        .child(label(initial_percent).insert(VolumePercentText))
+                        .child(btn_ghost("+").on_click(raise_global_volume)),
+                ),
+        )
+        // Back button
+        .child(btn_primary("Back").on_click(go_back_on_click));
+
+    let menu = root.spawn(&mut commands).id();
+    commands.entity(ui_root.0).add_child(menu);
+}
+
+fn update_volume_percent(
+    mut q: Query<&mut Text, With<VolumePercentText>>,
+    global_volume: Res<GlobalVolume>,
+) {
+    if !global_volume.is_changed() {
+        return;
+    }
+    let text = format_percent(&global_volume);
+    for mut t in &mut q {
+        t.0 = text.clone();
+    }
 }
 
 // --- Action Handlers ---
@@ -108,7 +109,7 @@ fn raise_global_volume(_: On<Pointer<Click>>, mut global_volume: ResMut<GlobalVo
 fn go_back_on_click(
     _: On<Pointer<Click>>,
     screen: Res<State<Screen>>,
-    mut next_menu: ResMut<NextState<Menu>>,
+    next_menu: ResMut<NextState<Menu>>,
 ) {
     go_back(screen, next_menu);
 }
