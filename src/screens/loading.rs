@@ -1,15 +1,9 @@
 use bevy::prelude::*;
 
-use bevy_immediate::{
-    Imm,
-    attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::CapsUi,
-};
-
-use crate::{UiRoot, asset_tracking::ResourceHandles, screens::Screen, theme::prelude::*};
+use crate::ui::prelude::*;
+use crate::{UiRoot, asset_tracking::ResourceHandles, screens::Screen};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(BevyImmediateAttachPlugin::<CapsUi, LoadingScreen>::new());
     app.init_resource::<TargetScreen>();
     app.add_systems(OnEnter(Screen::Loading), spawn_loading_screen);
     app.add_systems(
@@ -21,35 +15,21 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component)]
 pub struct LoadingScreen;
 
-impl ImmediateAttach<CapsUi> for LoadingScreen {
-    type Params = ();
-
-    fn construct(ui: &mut Imm<CapsUi>, _: &mut ()) {
-        // Simple label
-        ui.ch().label("Loading...").text_color(Color::WHITE);
-    }
-}
-
 fn spawn_loading_screen(mut commands: Commands, ui_root: Res<UiRoot>) {
-    let loading = commands
-        .spawn((
+    let root = div()
+        .col()
+        .items_center()
+        .justify_center()
+        .w(Val::Percent(100.0))
+        .h(Val::Percent(100.0))
+        .insert((
             LoadingScreen,
-            (
-                Name::new("Loading Screen"),
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-                Visibility::default(),
-                InheritedVisibility::default(),
-                ViewVisibility::default(),
-            ),
+            Name::new("Loading Screen"),
             DespawnOnExit(Screen::Loading),
         ))
-        .id();
+        .child(label("Loading...").color(Color::WHITE));
+
+    let loading = root.spawn(&mut commands).id();
     commands.entity(ui_root.0).add_child(loading);
 }
 
