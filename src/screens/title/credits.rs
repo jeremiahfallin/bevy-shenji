@@ -1,17 +1,13 @@
+//! The Credits menu (shown over Title).
+
 use bevy::input::common_conditions::input_just_pressed;
 use bevy::prelude::*;
+use bevy_declarative::prelude::px;
 
-use bevy_immediate::{
-    Imm,
-    attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::CapsUi,
-};
-
-use crate::theme::prelude::*;
-use crate::{asset_tracking::LoadResource, audio::music, menus::Menu};
+use crate::ui::prelude::*;
+use crate::{UiRoot, asset_tracking::LoadResource, audio::music, menus::Menu};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(BevyImmediateAttachPlugin::<CapsUi, CreditsMenu>::new());
     app.add_systems(OnEnter(Menu::Credits), spawn_credits_menu);
     app.add_systems(
         Update,
@@ -25,71 +21,79 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component)]
 pub struct CreditsMenu;
 
-impl ImmediateAttach<CapsUi> for CreditsMenu {
-    type Params = ();
+const KEY_COL_WIDTH: f32 = 220.0;
+const VAL_COL_WIDTH: f32 = 320.0;
 
-    fn construct(ui: &mut Imm<CapsUi>, _: &mut ()) {
-        // 1. Header: Created By
-        ui.ch().header("Created by");
-
-        // 2. Grid: Created By
-        ui.ch().apply(style_grid_2col).add(|ui| {
-            add_credit_row(ui, "Joe Shmoe", "Implemented alligator wrestling AI");
-            add_credit_row(ui, "Jane Doe", "Made the music for the alien invasion");
-        });
-
-        // 3. Header: Assets
-        ui.ch().header("Assets");
-
-        // 4. Grid: Assets
-        ui.ch().apply(style_grid_2col).add(|ui| {
-            add_credit_row(ui, "Ducky sprite", "CC0 by Caz Creates Games");
-            add_credit_row(ui, "Button SFX", "CC0 by Jaszunio15");
-            add_credit_row(ui, "Music", "CC BY 3.0 by Kevin MacLeod");
-            add_credit_row(
-                ui,
-                "Bevy logo",
-                "All rights reserved by the Bevy Foundation...",
-            );
-        });
-
-        // 5. Back Button
-        let mut btn = ui.ch().button();
-        btn.entity_commands().observe(go_back_on_click);
-        btn.add(|ui| {
-            ui.ch().label("Back");
-        });
-    }
+fn credit_row(key: &str, value: &str) -> Div {
+    div()
+        .flex()
+        .row()
+        .gap_x(px(SPACE_4))
+        .child(
+            div()
+                .flex()
+                .row()
+                .justify_end()
+                .w(Val::Px(KEY_COL_WIDTH))
+                .child(label(key).color(GRAY_400)),
+        )
+        .child(
+            div()
+                .flex()
+                .row()
+                .justify_start()
+                .w(Val::Px(VAL_COL_WIDTH))
+                .child(label(value)),
+        )
 }
 
-// Helper to spawn a row in the grid
-fn add_credit_row(ui: &mut Imm<CapsUi>, key: &str, value: &str) {
-    // Left Column (Key)
-    ui.ch()
-        .label(key)
-        .justify_self(JustifySelf::End)
-        .color(Color::srgb(0.66, 0.66, 0.66)); // Approx #aaaaaa
-
-    // Right Column (Value)
-    ui.ch().label(value).justify_self(JustifySelf::Start);
-}
-
-fn spawn_credits_menu(mut commands: Commands) {
-    commands.spawn((
-        CreditsMenu,
-        (
+fn spawn_credits_menu(mut commands: Commands, ui_root: Res<UiRoot>) {
+    let root = div()
+        .col()
+        .items_center()
+        .justify_center()
+        .w(Val::Percent(100.0))
+        .h(Val::Percent(100.0))
+        .gap_y(px(SPACE_4))
+        .insert((
+            CreditsMenu,
             Name::new("Credits Menu"),
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                flex_direction: FlexDirection::Column,
-                ..default()
-            },
-        ),
-        DespawnOnExit(Menu::Credits),
-    ));
+            DespawnOnExit(Menu::Credits),
+        ))
+        // Created by
+        .child(heading_2("Created by"))
+        .child(
+            div()
+                .col()
+                .gap_y(px(SPACE_2))
+                .child(credit_row(
+                    "Joe Shmoe",
+                    "Implemented alligator wrestling AI",
+                ))
+                .child(credit_row(
+                    "Jane Doe",
+                    "Made the music for the alien invasion",
+                )),
+        )
+        // Assets
+        .child(heading_2("Assets"))
+        .child(
+            div()
+                .col()
+                .gap_y(px(SPACE_2))
+                .child(credit_row("Ducky sprite", "CC0 by Caz Creates Games"))
+                .child(credit_row("Button SFX", "CC0 by Jaszunio15"))
+                .child(credit_row("Music", "CC BY 3.0 by Kevin MacLeod"))
+                .child(credit_row(
+                    "Bevy logo",
+                    "All rights reserved by the Bevy Foundation...",
+                )),
+        )
+        // Back
+        .child(btn_primary("Back").on_click(go_back_on_click));
+
+    let menu = root.spawn(&mut commands).id();
+    commands.entity(ui_root.0).add_child(menu);
 }
 
 // --- Audio & Navigation ---
