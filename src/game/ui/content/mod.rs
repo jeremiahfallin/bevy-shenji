@@ -1,13 +1,18 @@
+//! Main view container. Spawns the six view marker entities once when the
+//! `Content` marker is added and toggles their `Display` based on
+//! `UiState::active_view`.
+//!
+//! Each view (Dashboard / Research / Characters / Squads / Locations /
+//! Buildings) carries its own `On<Add, …>` observer (in its module) that
+//! populates the entity. We keep entities alive across view switches and
+//! only flip `Display::Flex` ↔ `Display::None`, so per-view scroll positions
+//! and other transient UI state survive.
+
 use bevy::prelude::*;
-use bevy_immediate::{
-    Imm,
-    attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::CapsUi,
-};
 
 use crate::game::resources::{GameView, UiState};
-use crate::game::ui::inspector::{CharacterInspector, InspectorState};
-use crate::theme::prelude::*;
+use crate::game::ui::inspector::InspectorState;
+use crate::screens::Screen;
 
 pub mod buildings;
 pub mod characters;
@@ -25,7 +30,8 @@ pub use squads::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<InspectorState>();
-    app.add_plugins((BevyImmediateAttachPlugin::<CapsUi, Content>::new(),));
+    app.add_observer(populate_content_on_add);
+    app.add_systems(Update, update_active_view.run_if(in_state(Screen::Gameplay)));
     app.add_plugins((
         dashboard::plugin,
         characters::plugin,
@@ -39,56 +45,91 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component)]
 pub struct Content;
 
-impl ImmediateAttach<CapsUi> for Content {
-    // Inject the game state resource ('static lifetime is required here)
-    type Params = Res<'static, UiState>;
+/// Marker on each view child entity identifying which `GameView` it represents.
+/// Lives alongside the view's own marker (e.g. `DashboardView`).
+#[derive(Component)]
+struct ContentViewKind(GameView);
 
-    fn construct(ui: &mut Imm<CapsUi>, ui_state: &mut Res<UiState>) {
-        let active = ui_state.active_view;
-        ui.ch().w_full().h_full().p(Val::Px(SPACE_5)).add(|ui| {
-            // Render all views every frame but hide inactive ones via Display::None.
-            // This keeps entities alive across view switches, preventing flicker
-            // from entity destruction/recreation.
-            //
-            // We use a single .style() call per view to set all layout properties
-            // atomically. This avoids a first-frame issue where chained .style()
-            // calls each create a fresh Node::default() (overwriting prior
-            // properties) before the entity is flushed to the world.
-            let view_style = |is_active: bool| {
-                move |n: &mut Node| {
-                    n.width = Val::Percent(100.0);
-                    n.height = Val::Percent(100.0);
-                    n.display = if is_active {
-                        Display::Flex
-                    } else {
-                        Display::None
-                    };
-                }
-            };
+fn populate_content_on_add(
+    add: On<Add, Content>,
+    mut commands: Commands,
+    ui_state: Res<UiState>,
+) {
+    let parent = add.entity;
+    let active = ui_state.active_view;
+    let display_for = |kind: GameView| {
+        if kind == active {
+            Display::Flex
+        } else {
+            Display::None
+        }
+    };
+    let view_node = |kind: GameView| Node {
+        width: Val::Percent(100.0),
+        height: Val::Percent(100.0),
+        display: display_for(kind),
+        ..default()
+    };
 
-            ui.ch_id("view_dashboard")
-                .style(view_style(active == GameView::Dashboard))
-                .on_spawn_insert(|| DashboardView);
+    let dashboard = commands
+        .spawn((
+            view_node(GameView::Dashboard),
+            ContentViewKind(GameView::Dashboard),
+            DashboardView,
+        ))
+        .id();
+    let research = commands
+        .spawn((
+            view_node(GameView::Research),
+            ContentViewKind(GameView::Research),
+            ResearchView,
+        ))
+        .id();
+    let characters = commands
+        .spawn((
+            view_node(GameView::Characters),
+            ContentViewKind(GameView::Characters),
+            CharactersView,
+        ))
+        .id();
+    let squads = commands
+        .spawn((
+            view_node(GameView::Squads),
+            ContentViewKind(GameView::Squads),
+            SquadsView,
+        ))
+        .id();
+    let locations = commands
+        .spawn((
+            view_node(GameView::Locations),
+            ContentViewKind(GameView::Locations),
+            LocationsView,
+        ))
+        .id();
+    let buildings = commands
+        .spawn((
+            view_node(GameView::Buildings),
+            ContentViewKind(GameView::Buildings),
+            BuildingsView,
+        ))
+        .id();
+    commands.entity(parent).add_children(&[
+        dashboard, research, characters, squads, locations, buildings,
+    ]);
+}
 
-            ui.ch_id("view_research")
-                .style(view_style(active == GameView::Research))
-                .on_spawn_insert(|| ResearchView);
-
-            ui.ch_id("view_characters")
-                .style(view_style(active == GameView::Characters))
-                .on_spawn_insert(|| CharactersView);
-
-            ui.ch_id("view_squads")
-                .style(view_style(active == GameView::Squads))
-                .on_spawn_insert(|| SquadsView);
-
-            ui.ch_id("view_locations")
-                .style(view_style(active == GameView::Locations))
-                .on_spawn_insert(|| LocationsView);
-
-            ui.ch_id("view_buildings")
-                .style(view_style(active == GameView::Buildings))
-                .on_spawn_insert(|| BuildingsView);
-        });
+fn update_active_view(
+    ui_state: Res<UiState>,
+    mut q: Query<(&ContentViewKind, &mut Node)>,
+) {
+    if !ui_state.is_changed() {
+        return;
+    }
+    for (kind, mut node) in &mut q {
+        node.display = if kind.0 == ui_state.active_view {
+            Display::Flex
+        } else {
+            Display::None
+        };
     }
 }
