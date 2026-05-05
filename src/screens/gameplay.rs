@@ -4,22 +4,13 @@ mod pause;
 
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 
-use bevy_immediate::{
-    Imm,
-    attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::CapsUi,
-};
-
 use crate::{
     Pause, UiRoot, game::simulation::SimulationState, game::ui::spawn_game_layout, menus::Menu,
-    screens::Screen, theme::prelude::*,
+    screens::Screen,
 };
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((
-        pause::plugin,
-        BevyImmediateAttachPlugin::<CapsUi, PauseOverlay>::new(),
-    ));
+    app.add_plugins(pause::plugin);
 
     app.add_systems(OnEnter(Screen::Gameplay), spawn_game_layout);
 
@@ -49,23 +40,19 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component)]
 pub struct PauseOverlay;
 
-impl ImmediateAttach<CapsUi> for PauseOverlay {
-    type Params = ();
-
-    fn construct(ui: &mut Imm<CapsUi>, _: &mut ()) {
-        ui.ch()
-            .w_full()
-            .h_full()
-            .bg(Color::srgba(0.0, 0.0, 0.0, 0.8));
-    }
-}
-
 fn spawn_pause_overlay(mut commands: Commands, ui_root: Res<UiRoot>) {
     let overlay = commands
         .spawn((
             PauseOverlay,
             Name::new("Pause Overlay"),
-            Node::default(),
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                ..default()
+            },
             BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
             DespawnOnExit(Pause(true)),
         ))
