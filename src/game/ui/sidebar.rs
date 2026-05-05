@@ -1,138 +1,285 @@
-use bevy::prelude::*;
+//! Gameplay sidebar — nav rail + sim/base/resource info.
+//!
+//! Spawned once when the `Sidebar` marker entity is added (the layout
+//! creates that entity). Dynamic fields (sim time/days/speed, base zeni/power,
+//! resource counts) carry marker components and are kept in sync by per-field
+//! systems gated on `Res::is_changed()` — the same pattern Settings uses.
+//! Nav-button highlight follows `UiState::active_view` via a similar system.
 
-use bevy_immediate::{
-    Imm,
-    attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::CapsUi,
-};
+use bevy::prelude::*;
+use bevy_declarative::prelude::px;
 use lucide_icons::Icon;
 
 use crate::game::resources::{BaseInventory, BaseState, GameView, UiState};
 use crate::game::simulation::SimulationState;
-use crate::theme::prelude::*;
+use crate::screens::Screen;
+use crate::ui::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(BevyImmediateAttachPlugin::<CapsUi, Sidebar>::new());
+    app.add_observer(populate_sidebar_on_add);
+    app.add_systems(
+        Update,
+        (
+            update_nav_active,
+            update_sim_text,
+            update_base_text,
+            update_resource_counts,
+        )
+            .run_if(in_state(Screen::Gameplay)),
+    );
 }
 
 #[derive(Component)]
 pub struct Sidebar;
 
-impl ImmediateAttach<CapsUi> for Sidebar {
-    type Params = (
-        ResMut<'static, UiState>,
-        Res<'static, SimulationState>,
-        Res<'static, BaseState>,
-        Res<'static, BaseInventory>,
-    );
+// --- Dynamic-field markers --------------------------------------------------
 
-    fn construct(
-        ui: &mut Imm<CapsUi>,
-        (ui_state, sim_state, base_state, base_inv): &mut (
-            ResMut<UiState>,
-            Res<SimulationState>,
-            Res<BaseState>,
-            Res<BaseInventory>,
-        ),
-    ) {
-        ui.ch()
-            .flex_col()
-            .w_full()
-            .min_w(Val::Px(250.0))
-            .flex_shrink_0()
-            .justify_between()
-            .add(|ui| {
-                // Navigation buttons
-                ui.ch()
-                    .flex_col()
-                    .row_gap(SPACE_0_5)
-                    .p(Val::Px(SPACE_2))
-                    .add(|ui| {
-                        let mut nav_btn = |label: &str, icon: Icon, view: GameView| {
-                            let is_active = ui_state.active_view == view;
-                            let target_view = view;
+#[derive(Component)]
+struct NavButton(GameView);
 
-                            ui.ch()
-                                .icon_button()
-                                .with_icon(icon)
-                                .with_label(label)
-                                .apply(|e| if is_active { e.bg(GRAY_700) } else { e })
-                                .on_click_once(
-                                    move |_: On<Pointer<Click>>, mut state: ResMut<UiState>| {
-                                        state.active_view = target_view;
-                                    },
-                                );
-                        };
+#[derive(Component)]
+struct SimTimeText;
 
-                        nav_btn("Dashboard", Icon::LayoutDashboard, GameView::Dashboard);
-                        nav_btn("Research", Icon::Book, GameView::Research);
-                        nav_btn("Squads", Icon::Group, GameView::Squads);
-                        nav_btn("Characters", Icon::User, GameView::Characters);
-                        nav_btn("Locations", Icon::Map, GameView::Locations);
-                        nav_btn("Buildings", Icon::Hammer, GameView::Buildings);
-                    });
+#[derive(Component)]
+struct SimDaysText;
 
-                // Simulation info
-                ui.ch()
-                    .flex_col()
-                    .row_gap(SPACE_0_5)
-                    .p(Val::Px(SPACE_2))
-                    .w_full()
-                    .add(|ui| {
-                        ui.ch().header("Simulation");
+#[derive(Component)]
+struct SimSpeedText;
 
-                        let time_text = format!("Game Time: {}", sim_state.game_time);
-                        ui.ch().label(time_text);
+#[derive(Component)]
+struct BaseZeniText;
 
-                        let days_text = format!("Days: {}", sim_state.game_days);
-                        ui.ch().label(days_text);
+#[derive(Component)]
+struct BasePowerText;
 
-                        let speed_text = if sim_state.is_paused() {
-                            "Paused".to_string()
-                        } else {
-                            format!("Speed: {}x", sim_state.speed)
-                        };
-                        ui.ch().label(speed_text);
-                    });
+#[derive(Component)]
+struct ResourceCountText {
+    id: &'static str,
+}
 
-                // Currency and power
-                ui.ch()
-                    .flex_col()
-                    .row_gap(SPACE_0_5)
-                    .p(Val::Px(SPACE_2))
-                    .w_full()
-                    .add(|ui| {
-                        ui.ch().header("Base");
+// --- Initial spawn ----------------------------------------------------------
 
-                        ui.ch().label(format!("Zeni: {}", base_state.value.zeni));
+fn populate_sidebar_on_add(
+    add: On<Add, Sidebar>,
+    mut commands: Commands,
+    ui_state: Res<UiState>,
+    sim_state: Res<SimulationState>,
+    base_state: Res<BaseState>,
+    base_inv: Res<BaseInventory>,
+) {
+    let sidebar = add.entity;
 
-                        ui.ch().label(format!(
-                            "Power: {}/{}",
-                            base_state.power.generation, base_state.power.consumption
-                        ));
-                    });
+    let nav_section = div()
+        .col()
+        .gap_y(px(SPACE_0_5))
+        .p(px(SPACE_2))
+        .child(nav_button(
+            "Dashboard",
+            Icon::LayoutDashboard,
+            GameView::Dashboard,
+            ui_state.active_view,
+        ))
+        .child(nav_button(
+            "Research",
+            Icon::Book,
+            GameView::Research,
+            ui_state.active_view,
+        ))
+        .child(nav_button(
+            "Squads",
+            Icon::Group,
+            GameView::Squads,
+            ui_state.active_view,
+        ))
+        .child(nav_button(
+            "Characters",
+            Icon::User,
+            GameView::Characters,
+            ui_state.active_view,
+        ))
+        .child(nav_button(
+            "Locations",
+            Icon::Map,
+            GameView::Locations,
+            ui_state.active_view,
+        ))
+        .child(nav_button(
+            "Buildings",
+            Icon::Hammer,
+            GameView::Buildings,
+            ui_state.active_view,
+        ));
 
-                // Key resources from inventory
-                ui.ch()
-                    .flex_col()
-                    .row_gap(SPACE_0_5)
-                    .p(Val::Px(SPACE_2))
-                    .w_full()
-                    .add(|ui| {
-                        ui.ch().header("Resources");
+    let sim_section = div()
+        .col()
+        .gap_y(px(SPACE_0_5))
+        .p(px(SPACE_2))
+        .w_full()
+        .child(heading_3("Simulation"))
+        .child(label(format!("Game Time: {}", sim_state.game_time)).insert(SimTimeText))
+        .child(label(format!("Days: {}", sim_state.game_days)).insert(SimDaysText))
+        .child(label(sim_speed_text(&sim_state)).insert(SimSpeedText));
 
-                        let resource_row = |ui: &mut Imm<CapsUi>, label: &str, count: u32| {
-                            ui.ch().flex_row().justify_between().w_full().add(|ui| {
-                                ui.ch().label(label).text_color(Color::srgb(0.8, 0.8, 0.8));
-                                ui.ch().label(format!("{}", count)).text_color(Color::WHITE);
-                            });
-                        };
+    let base_section = div()
+        .col()
+        .gap_y(px(SPACE_0_5))
+        .p(px(SPACE_2))
+        .w_full()
+        .child(heading_3("Base"))
+        .child(label(format!("Zeni: {}", base_state.value.zeni)).insert(BaseZeniText))
+        .child(
+            label(format!(
+                "Power: {}/{}",
+                base_state.power.generation, base_state.power.consumption
+            ))
+            .insert(BasePowerText),
+        );
 
-                        resource_row(ui, "Lumber", base_inv.count("lumber"));
-                        resource_row(ui, "Stone", base_inv.count("stone"));
-                        resource_row(ui, "Iron Ore", base_inv.count("iron_ore"));
-                        resource_row(ui, "Copper Ore", base_inv.count("copper_ore"));
-                    });
-            });
+    let resources_section = div()
+        .col()
+        .gap_y(px(SPACE_0_5))
+        .p(px(SPACE_2))
+        .w_full()
+        .child(heading_3("Resources"))
+        .child(resource_row("Lumber", "lumber", &base_inv))
+        .child(resource_row("Stone", "stone", &base_inv))
+        .child(resource_row("Iron Ore", "iron_ore", &base_inv))
+        .child(resource_row("Copper Ore", "copper_ore", &base_inv));
+
+    let root = div()
+        .col()
+        .w_full()
+        .h_full()
+        .min_w(Val::Px(250.0))
+        .flex_shrink(0.0)
+        .justify_between()
+        .child(nav_section)
+        .child(sim_section)
+        .child(base_section)
+        .child(resources_section);
+
+    let root_entity = root.spawn(&mut commands).id();
+    commands.entity(sidebar).add_child(root_entity);
+}
+
+fn nav_button(label_text: &str, ic: Icon, view: GameView, active: GameView) -> Div {
+    let mut btn = div()
+        .flex()
+        .row()
+        .items_center()
+        .gap_x(px(SPACE_2))
+        .pad_x(px(SPACE_3))
+        .py(px(SPACE_2))
+        .rounded(px(SPACE_1))
+        .insert(NavButton(view))
+        .on_click(nav_button_on_click)
+        .child(icon(ic).color(Color::WHITE))
+        .child(text(label_text).color(Color::WHITE));
+    if view == active {
+        btn = btn.bg(GRAY_700);
+    }
+    btn
+}
+
+fn resource_row(name: &str, id: &'static str, base_inv: &BaseInventory) -> Div {
+    div()
+        .flex()
+        .row()
+        .justify_between()
+        .w_full()
+        .child(label(name).color(Color::srgb(0.8, 0.8, 0.8)))
+        .child(
+            text(format!("{}", base_inv.count(id)))
+                .color(Color::WHITE)
+                .insert(ResourceCountText { id }),
+        )
+}
+
+fn sim_speed_text(sim_state: &SimulationState) -> String {
+    if sim_state.is_paused() {
+        "Paused".to_string()
+    } else {
+        format!("Speed: {}x", sim_state.speed)
+    }
+}
+
+// --- Click handler ----------------------------------------------------------
+
+fn nav_button_on_click(
+    click: On<Pointer<Click>>,
+    q: Query<&NavButton>,
+    mut ui_state: ResMut<UiState>,
+) {
+    if let Ok(nav) = q.get(click.entity) {
+        ui_state.active_view = nav.0;
+    }
+}
+
+// --- Reactive update systems ------------------------------------------------
+
+fn update_nav_active(
+    ui_state: Res<UiState>,
+    mut q: Query<(&NavButton, &mut BackgroundColor)>,
+) {
+    if !ui_state.is_changed() {
+        return;
+    }
+    for (nav, mut bg) in &mut q {
+        if nav.0 == ui_state.active_view {
+            *bg = BackgroundColor(GRAY_700);
+        } else {
+            *bg = BackgroundColor(Color::NONE);
+        }
+    }
+}
+
+fn update_sim_text(
+    sim_state: Res<SimulationState>,
+    mut q_time: Query<&mut Text, (With<SimTimeText>, Without<SimDaysText>, Without<SimSpeedText>)>,
+    mut q_days: Query<&mut Text, (With<SimDaysText>, Without<SimTimeText>, Without<SimSpeedText>)>,
+    mut q_speed: Query<&mut Text, (With<SimSpeedText>, Without<SimTimeText>, Without<SimDaysText>)>,
+) {
+    if !sim_state.is_changed() {
+        return;
+    }
+    for mut t in &mut q_time {
+        t.0 = format!("Game Time: {}", sim_state.game_time);
+    }
+    for mut t in &mut q_days {
+        t.0 = format!("Days: {}", sim_state.game_days);
+    }
+    for mut t in &mut q_speed {
+        t.0 = sim_speed_text(&sim_state);
+    }
+}
+
+fn update_base_text(
+    base_state: Res<BaseState>,
+    mut q_zeni: Query<&mut Text, (With<BaseZeniText>, Without<BasePowerText>)>,
+    mut q_power: Query<&mut Text, (With<BasePowerText>, Without<BaseZeniText>)>,
+) {
+    if !base_state.is_changed() {
+        return;
+    }
+    for mut t in &mut q_zeni {
+        t.0 = format!("Zeni: {}", base_state.value.zeni);
+    }
+    for mut t in &mut q_power {
+        t.0 = format!(
+            "Power: {}/{}",
+            base_state.power.generation, base_state.power.consumption
+        );
+    }
+}
+
+fn update_resource_counts(
+    base_inv: Res<BaseInventory>,
+    mut q: Query<(&ResourceCountText, &mut Text)>,
+) {
+    if !base_inv.is_changed() {
+        return;
+    }
+    for (rc, mut t) in &mut q {
+        t.0 = format!("{}", base_inv.count(rc.id));
     }
 }
