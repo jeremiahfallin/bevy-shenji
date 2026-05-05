@@ -28,7 +28,6 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
         BevyImmediateAttachPlugin::<CapsUi, Content>::new(),
         BevyImmediateAttachPlugin::<CapsUi, CharacterInspector>::new(),
-        BevyImmediateAttachPlugin::<CapsUi, BuildingsView>::new(),
     ));
     app.add_plugins((
         dashboard::plugin,
@@ -36,6 +35,7 @@ pub(super) fn plugin(app: &mut App) {
         squads::plugin,
         research::plugin,
         locations::plugin,
+        buildings::plugin,
     ));
 }
 
