@@ -25,10 +25,7 @@ pub use squads::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<InspectorState>();
-    app.add_plugins((
-        BevyImmediateAttachPlugin::<CapsUi, Content>::new(),
-        BevyImmediateAttachPlugin::<CapsUi, CharacterInspector>::new(),
-    ));
+    app.add_plugins((BevyImmediateAttachPlugin::<CapsUi, Content>::new(),));
     app.add_plugins((
         dashboard::plugin,
         characters::plugin,

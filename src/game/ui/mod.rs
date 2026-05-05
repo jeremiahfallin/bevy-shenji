@@ -18,6 +18,7 @@ pub(super) fn plugin(app: &mut App) {
         character::plugin,
         content::plugin,
         context_menu::plugin,
+        inspector::plugin,
         sidebar::plugin,
         layout::plugin,
     ));
