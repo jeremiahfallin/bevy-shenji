@@ -1,295 +1,345 @@
+//! Locations view — exploration stats, send-explorer panel, list of
+//! discovered locations.
+//!
+//! Spawned once on `On<Add, LocationsView>`; rebuilt whenever any source
+//! changes. One click handler ("Explore" button per idle character at base)
+//! preserved via an `ExploreButton(Entity)` marker + observer system.
+
+use bevy::prelude::*;
+use bevy_declarative::prelude::px;
+
 use crate::game::action::{Action, ActionState};
 use crate::game::character::{CharacterInfo, CharacterLocation};
 use crate::game::location::{LocationInfo, LocationResources, LocationType};
 use crate::game::resources::{ExplorationState, NotificationLevel, NotificationState};
-use crate::theme::prelude::*;
-use bevy::prelude::*;
-use bevy_immediate::{Imm, attach::ImmediateAttach, ui::CapsUi};
+use crate::screens::Screen;
+use crate::ui::prelude::*;
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_observer(populate_locations_on_add);
+    app.add_systems(
+        Update,
+        refresh_locations.run_if(in_state(Screen::Gameplay)),
+    );
+}
 
 #[derive(Component)]
 pub struct LocationsView;
 
-impl ImmediateAttach<CapsUi> for LocationsView {
-    type Params = (
-        Query<'static, 'static, (&'static LocationInfo, &'static LocationResources)>,
-        Query<
-            'static,
-            'static,
-            (
-                Entity,
-                &'static CharacterInfo,
-                &'static ActionState,
-                &'static CharacterLocation,
-            ),
-        >,
-        Res<'static, ExplorationState>,
-    );
+#[derive(Component)]
+struct ExploreButton {
+    entity: Entity,
+    character_name: String,
+}
 
-    fn construct(
-        ui: &mut Imm<CapsUi>,
-        (location_query, character_query, exploration_state): &mut (
-            Query<(&LocationInfo, &LocationResources)>,
-            Query<(Entity, &CharacterInfo, &ActionState, &CharacterLocation)>,
-            Res<ExplorationState>,
-        ),
-    ) {
-        ui.ch().header("Locations");
-
-        ui.ch()
-            .flex_col()
-            .w_full()
-            .p(Val::Px(SPACE_2_5))
-            .row_gap(SPACE_2_5)
-            .scroll_y()
-            .add(|ui| {
-                // --- Exploration Stats ---
-                ui.ch()
-                    .flex_col()
-                    .w_full()
-                    .p(Val::Px(SPACE_2))
-                    .bg(GRAY_800)
-                    .mb(Val::Px(SPACE_1))
-                    .rounded(4.0)
-                    .add(|ui| {
-                        ui.ch().sub_header("Exploration");
-
-                        ui.ch()
-                            .label(format!(
-                                "Total explorations: {}",
-                                exploration_state.total_explorations
-                            ))
-                            .text_size(12.0)
-                            .text_color(GRAY_300);
-
-                        // Generated node counts
-                        if !exploration_state.generated_nodes.is_empty() {
-                            let mut nodes: Vec<_> =
-                                exploration_state.generated_nodes.iter().collect();
-                            nodes.sort_by_key(|(k, _)| (*k).clone());
-
-                            for (resource_type, count) in nodes {
-                                ui.ch()
-                                    .label(format!(
-                                        "{} nodes: {}/{}",
-                                        resource_type,
-                                        count,
-                                        ExplorationState::MAX_GENERATED_PER_TYPE
-                                    ))
-                                    .text_size(11.0)
-                                    .text_color(GRAY_400);
-                            }
-                        }
-
-                        // Undiscovered location hint
-                        let undiscovered = location_query
-                            .iter()
-                            .filter(|(info, _)| !info.discovered)
-                            .count();
-                        if undiscovered > 0 {
-                            ui.ch()
-                                .label(format!(
-                                    "{} location{} remain undiscovered",
-                                    undiscovered,
-                                    if undiscovered == 1 { "" } else { "s" }
-                                ))
-                                .text_size(11.0)
-                                .text_color(Color::srgb(0.8, 0.7, 0.3));
-                        }
-                    });
-
-                // --- Send Explorer ---
-                ui.ch()
-                    .flex_col()
-                    .w_full()
-                    .p(Val::Px(SPACE_2))
-                    .bg(Color::srgb(0.12, 0.15, 0.2))
-                    .mb(Val::Px(SPACE_1))
-                    .rounded(4.0)
-                    .add(|ui| {
-                        ui.ch().sub_header("Send Explorer");
-
-                        // Characters currently exploring
-                        let exploring: Vec<String> = character_query
-                            .iter()
-                            .filter(|(_, _, action_state, _)| {
-                                matches!(&action_state.current_action, Some(Action::Explore))
-                            })
-                            .map(|(_, info, _, _)| info.name.clone())
-                            .collect();
-
-                        if !exploring.is_empty() {
-                            ui.ch()
-                                .label(format!("Exploring: {}", exploring.join(", ")))
-                                .text_size(11.0)
-                                .text_color(Color::srgb(0.4, 0.7, 0.9))
-                                .mb(Val::Px(SPACE_1));
-                        }
-
-                        // Idle characters at base
-                        let idle_at_base: Vec<(Entity, String)> = character_query
-                            .iter()
-                            .filter(|(_, _, action_state, loc)| {
-                                loc.location_id == "base"
-                                    && matches!(
-                                        &action_state.current_action,
-                                        None | Some(Action::Idle)
-                                    )
-                            })
-                            .map(|(e, info, _, _)| (e, info.name.clone()))
-                            .collect();
-
-                        if idle_at_base.is_empty() {
-                            ui.ch()
-                                .label("No idle characters at base")
-                                .text_size(11.0)
-                                .text_color(GRAY_500);
-                        } else {
-                            for (entity, name) in idle_at_base {
-                                let char_name = name.clone();
-                                let char_name_notif = name.clone();
-                                ui.ch()
-                                    .flex_row()
-                                    .w_full()
-                                    .justify_between()
-                                    .items_center()
-                                    .mb(Val::Px(SPACE_0_5))
-                                    .add(|ui| {
-                                        ui.ch()
-                                            .label(&char_name)
-                                            .text_size(12.0)
-                                            .text_color(Color::WHITE);
-
-                                        ui.ch()
-                                            .button()
-                                            .on_click_once(
-                                                move |_: On<Pointer<Click>>,
-                                                      mut action_query: Query<&mut ActionState>,
-                                                      mut notifications: ResMut<
-                                                    NotificationState,
-                                                >| {
-                                                    if let Ok(mut action_state) =
-                                                        action_query.get_mut(entity)
-                                                    {
-                                                        action_state.queue_action(Action::Explore);
-                                                        notifications.push(
-                                                            format!(
-                                                                "{} sent to explore!",
-                                                                char_name_notif
-                                                            ),
-                                                            NotificationLevel::Info,
-                                                        );
-                                                    }
-                                                },
-                                            )
-                                            .add(|ui| {
-                                                ui.ch()
-                                                    .label("Explore")
-                                                    .text_size(11.0)
-                                                    .text_color(Color::WHITE);
-                                            });
-                                    });
-                            }
-                        }
-                    });
-
-                // --- Discovered Locations ---
-                let mut locations: Vec<_> = location_query
-                    .iter()
-                    .filter(|(info, _)| info.discovered)
-                    .collect();
-                locations.sort_by_key(|(info, _)| info.distance);
-
-                if locations.is_empty() {
-                    ui.ch()
-                        .label("No locations discovered yet")
-                        .text_color(Color::srgb(0.5, 0.5, 0.5));
-                    return;
-                }
-
-                ui.ch()
-                    .sub_header("Discovered Locations")
-                    .mb(Val::Px(SPACE_1));
-
-                for (info, resources) in &locations {
-                    ui.ch()
-                        .flex_col()
-                        .w_full()
-                        .p(Val::Px(SPACE_2))
-                        .bg(GRAY_800)
-                        .mb(Val::Px(SPACE_1))
-                        .rounded(4.0)
-                        .add(|ui| {
-                            // Name and type
-                            ui.ch()
-                                .flex_row()
-                                .justify_between()
-                                .w_full()
-                                .mb(Val::Px(SPACE_1))
-                                .add(|ui| {
-                                    ui.ch()
-                                        .label(&info.name)
-                                        .font_bold()
-                                        .text_color(Color::WHITE);
-
-                                    let type_str = match info.loc_type {
-                                        LocationType::Base => "Base",
-                                        LocationType::Mine => "Mine",
-                                        LocationType::Forest => "Forest",
-                                        LocationType::Ruins => "Ruins",
-                                        LocationType::City => "City",
-                                        LocationType::Wilderness => "Wilderness",
-                                    };
-                                    ui.ch()
-                                        .label(type_str)
-                                        .text_color(Color::srgb(0.6, 0.6, 0.6));
-                                });
-
-                            // Distance
-                            if info.distance > 0 {
-                                ui.ch()
-                                    .label(format!("Distance: {}", info.distance))
-                                    .text_color(Color::srgb(0.7, 0.7, 0.7))
-                                    .mb(Val::Px(SPACE_0_5));
-                            }
-
-                            // Resources (if applicable)
-                            if !resources.resource_type.is_empty() && resources.capacity > 0 {
-                                ui.ch()
-                                    .flex_row()
-                                    .w_full()
-                                    .mb(Val::Px(SPACE_0_5))
-                                    .add(|ui| {
-                                        ui.ch()
-                                            .label(format!(
-                                                "{}: {}/{}",
-                                                resources.resource_type,
-                                                resources.current_amount,
-                                                resources.capacity
-                                            ))
-                                            .text_color(Color::srgb(0.8, 0.8, 0.5));
-                                        ui.ch()
-                                            .label(format!(
-                                                " (yield: {}/tick)",
-                                                resources.yield_rate
-                                            ))
-                                            .text_color(Color::srgb(0.5, 0.7, 0.5));
-                                    });
-                            }
-
-                            // Characters at this location
-                            let chars_here: Vec<_> = character_query
-                                .iter()
-                                .filter(|(_, _, _, loc)| loc.location_id == info.id)
-                                .map(|(_, ci, _, _)| ci.name.clone())
-                                .collect();
-
-                            if !chars_here.is_empty() {
-                                ui.ch()
-                                    .label(format!("Characters: {}", chars_here.join(", ")))
-                                    .text_color(Color::srgb(0.5, 0.8, 0.5));
-                            }
-                        });
-                }
-            });
+fn explore_on_click(
+    click: On<Pointer<Click>>,
+    q: Query<&ExploreButton>,
+    mut action_query: Query<&mut ActionState>,
+    mut notifications: ResMut<NotificationState>,
+) {
+    if let Ok(marker) = q.get(click.entity) {
+        if let Ok(mut action_state) = action_query.get_mut(marker.entity) {
+            action_state.queue_action(Action::Explore);
+            notifications.push(
+                format!("{} sent to explore!", marker.character_name),
+                NotificationLevel::Info,
+            );
+        }
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn populate_locations_on_add(
+    add: On<Add, LocationsView>,
+    mut commands: Commands,
+    location_query: Query<(&LocationInfo, &LocationResources)>,
+    character_query: Query<(Entity, &CharacterInfo, &ActionState, &CharacterLocation)>,
+    exploration_state: Res<ExplorationState>,
+) {
+    spawn_locations_children(
+        &mut commands,
+        add.entity,
+        &location_query,
+        &character_query,
+        &exploration_state,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn refresh_locations(
+    mut commands: Commands,
+    view_q: Query<Entity, With<LocationsView>>,
+    location_query: Query<(&LocationInfo, &LocationResources)>,
+    character_query: Query<(Entity, &CharacterInfo, &ActionState, &CharacterLocation)>,
+    exploration_state: Res<ExplorationState>,
+    changed_locs: Query<(), Or<(Changed<LocationInfo>, Changed<LocationResources>)>>,
+    changed_chars: Query<
+        (),
+        Or<(
+            Changed<CharacterInfo>,
+            Changed<ActionState>,
+            Changed<CharacterLocation>,
+        )>,
+    >,
+) {
+    let any_changed = exploration_state.is_changed()
+        || !changed_locs.is_empty()
+        || !changed_chars.is_empty();
+    if !any_changed {
+        return;
+    }
+    for view in &view_q {
+        commands.entity(view).despawn_related::<Children>();
+        spawn_locations_children(
+            &mut commands,
+            view,
+            &location_query,
+            &character_query,
+            &exploration_state,
+        );
+    }
+}
+
+fn spawn_locations_children(
+    commands: &mut Commands,
+    view: Entity,
+    location_query: &Query<(&LocationInfo, &LocationResources)>,
+    character_query: &Query<(Entity, &CharacterInfo, &ActionState, &CharacterLocation)>,
+    exploration_state: &ExplorationState,
+) {
+    let mut root = div()
+        .col()
+        .w_full()
+        .p(px(SPACE_2_5))
+        .gap_y(px(SPACE_2_5))
+        .child(heading_2("Locations"))
+        .child(exploration_stats_section(location_query, exploration_state))
+        .child(send_explorer_section(character_query));
+
+    let mut locations: Vec<_> = location_query
+        .iter()
+        .filter(|(info, _)| info.discovered)
+        .collect();
+    locations.sort_by_key(|(info, _)| info.distance);
+
+    if locations.is_empty() {
+        root = root.child(label("No locations discovered yet").color(Color::srgb(0.5, 0.5, 0.5)));
+    } else {
+        root = root.child(heading_3("Discovered Locations").mb(px(SPACE_1)));
+        for (info, resources) in &locations {
+            root = root.child(location_card(info, resources, character_query));
+        }
+    }
+
+    let scroll = scroll_view().vertical(true).child(root);
+    let scroll_entity = scroll.spawn(commands).id();
+    commands.entity(view).add_child(scroll_entity);
+}
+
+fn exploration_stats_section(
+    location_query: &Query<(&LocationInfo, &LocationResources)>,
+    exploration_state: &ExplorationState,
+) -> Div {
+    let mut section = div()
+        .col()
+        .w_full()
+        .p(px(SPACE_2))
+        .bg(GRAY_800)
+        .mb(px(SPACE_1))
+        .rounded(Val::Px(4.0))
+        .child(heading_3("Exploration"))
+        .child(
+            text(format!(
+                "Total explorations: {}",
+                exploration_state.total_explorations
+            ))
+            .font_size(12.0)
+            .color(GRAY_300),
+        );
+
+    if !exploration_state.generated_nodes.is_empty() {
+        let mut nodes: Vec<_> = exploration_state.generated_nodes.iter().collect();
+        nodes.sort_by_key(|(k, _)| (*k).clone());
+        for (resource_type, count) in nodes {
+            section = section.child(
+                text(format!(
+                    "{} nodes: {}/{}",
+                    resource_type,
+                    count,
+                    ExplorationState::MAX_GENERATED_PER_TYPE
+                ))
+                .font_size(11.0)
+                .color(GRAY_400),
+            );
+        }
+    }
+
+    let undiscovered = location_query
+        .iter()
+        .filter(|(info, _)| !info.discovered)
+        .count();
+    if undiscovered > 0 {
+        section = section.child(
+            text(format!(
+                "{} location{} remain undiscovered",
+                undiscovered,
+                if undiscovered == 1 { "" } else { "s" }
+            ))
+            .font_size(11.0)
+            .color(Color::srgb(0.8, 0.7, 0.3)),
+        );
+    }
+    section
+}
+
+fn send_explorer_section(
+    character_query: &Query<(Entity, &CharacterInfo, &ActionState, &CharacterLocation)>,
+) -> Div {
+    let mut section = div()
+        .col()
+        .w_full()
+        .p(px(SPACE_2))
+        .bg(Color::srgb(0.12, 0.15, 0.2))
+        .mb(px(SPACE_1))
+        .rounded(Val::Px(4.0))
+        .child(heading_3("Send Explorer"));
+
+    let exploring: Vec<String> = character_query
+        .iter()
+        .filter(|(_, _, action_state, _)| {
+            matches!(&action_state.current_action, Some(Action::Explore))
+        })
+        .map(|(_, info, _, _)| info.name.clone())
+        .collect();
+    if !exploring.is_empty() {
+        section = section.child(
+            text(format!("Exploring: {}", exploring.join(", ")))
+                .font_size(11.0)
+                .color(Color::srgb(0.4, 0.7, 0.9))
+                .mb(px(SPACE_1)),
+        );
+    }
+
+    let idle_at_base: Vec<(Entity, String)> = character_query
+        .iter()
+        .filter(|(_, _, action_state, loc)| {
+            loc.location_id == "base"
+                && matches!(
+                    &action_state.current_action,
+                    None | Some(Action::Idle)
+                )
+        })
+        .map(|(e, info, _, _)| (e, info.name.clone()))
+        .collect();
+
+    if idle_at_base.is_empty() {
+        section = section.child(
+            text("No idle characters at base")
+                .font_size(11.0)
+                .color(GRAY_500),
+        );
+    } else {
+        for (entity, name) in idle_at_base {
+            section = section.child(
+                div()
+                    .flex()
+                    .row()
+                    .w_full()
+                    .justify_between()
+                    .items_center()
+                    .mb(px(SPACE_0_5))
+                    .child(text(name.clone()).font_size(12.0).color(Color::WHITE))
+                    .child(
+                        div()
+                            .pad_x(px(SPACE_3))
+                            .py(px(SPACE_1))
+                            .bg(PRIMARY_500)
+                            .rounded(Val::Px(4.0))
+                            .insert(ExploreButton {
+                                entity,
+                                character_name: name,
+                            })
+                            .on_click(explore_on_click)
+                            .child(text("Explore").font_size(11.0).color(Color::WHITE)),
+                    ),
+            );
+        }
+    }
+    section
+}
+
+fn location_card(
+    info: &LocationInfo,
+    resources: &LocationResources,
+    character_query: &Query<(Entity, &CharacterInfo, &ActionState, &CharacterLocation)>,
+) -> Div {
+    let type_str = match info.loc_type {
+        LocationType::Base => "Base",
+        LocationType::Mine => "Mine",
+        LocationType::Forest => "Forest",
+        LocationType::Ruins => "Ruins",
+        LocationType::City => "City",
+        LocationType::Wilderness => "Wilderness",
+    };
+
+    let mut card = div()
+        .col()
+        .w_full()
+        .p(px(SPACE_2))
+        .bg(GRAY_800)
+        .mb(px(SPACE_1))
+        .rounded(Val::Px(4.0))
+        .child(
+            div()
+                .flex()
+                .row()
+                .justify_between()
+                .w_full()
+                .mb(px(SPACE_1))
+                .child(text(info.name.clone()).color(Color::WHITE))
+                .child(text(type_str).color(Color::srgb(0.6, 0.6, 0.6))),
+        );
+
+    if info.distance > 0 {
+        card = card.child(
+            text(format!("Distance: {}", info.distance))
+                .color(Color::srgb(0.7, 0.7, 0.7))
+                .mb(px(SPACE_0_5)),
+        );
+    }
+
+    if !resources.resource_type.is_empty() && resources.capacity > 0 {
+        card = card.child(
+            div()
+                .flex()
+                .row()
+                .w_full()
+                .mb(px(SPACE_0_5))
+                .child(
+                    text(format!(
+                        "{}: {}/{}",
+                        resources.resource_type, resources.current_amount, resources.capacity
+                    ))
+                    .color(Color::srgb(0.8, 0.8, 0.5)),
+                )
+                .child(
+                    text(format!(" (yield: {}/tick)", resources.yield_rate))
+                        .color(Color::srgb(0.5, 0.7, 0.5)),
+                ),
+        );
+    }
+
+    let chars_here: Vec<_> = character_query
+        .iter()
+        .filter(|(_, _, _, loc)| loc.location_id == info.id)
+        .map(|(_, ci, _, _)| ci.name.clone())
+        .collect();
+    if !chars_here.is_empty() {
+        card = card.child(
+            text(format!("Characters: {}", chars_here.join(", ")))
+                .color(Color::srgb(0.5, 0.8, 0.5)),
+        );
+    }
+    card
 }
