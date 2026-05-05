@@ -1,22 +1,43 @@
+//! Right-click context menu overlay.
+//!
+//! Architecture:
+//! - `ContextMenuState` is the public API. Game code mutates it (sets
+//!   `is_open = true`, `position`, `target`, `context_type`, `mode`) to
+//!   open the menu; `close_context_menu_on_click` and the menu items
+//!   themselves close it again.
+//! - `ContextMenuOverlay` is a marker entity created by the gameplay
+//!   layout. An `On<Add>` observer attaches an empty container; a
+//!   refresh system tears down and rebuilds the menu's children whenever
+//!   `ContextMenuState` changes.
+//!
+//! The previous `ImmUiContextMenuExt` trait + `WithContextMenu` marker
+//! component were dropped — they were unreferenced outside this file.
+//! Future widgets that want to open the context menu can mutate
+//! `ContextMenuState` directly via their own observer system.
+
+use bevy::prelude::*;
+use bevy_declarative::prelude::px;
+
 use crate::game::action::{Action, ActionState};
 use crate::game::character::CharacterInfo;
 use crate::game::data::GameData;
 use crate::game::location::{LocationInfo, LocationRegistry, LocationResources};
 use crate::game::research::ResearchState;
-use crate::theme::prelude::*;
-use bevy::prelude::*;
-use bevy_immediate::{
-    CapSet, Imm, ImmEntity, ImplCap,
-    attach::{BevyImmediateAttachPlugin, ImmediateAttach},
-    ui::CapsUi,
-};
+use crate::screens::Screen;
+use crate::ui::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(BevyImmediateAttachPlugin::<CapsUi, ContextMenuOverlay>::new());
-    app.add_systems(Update, close_context_menu_on_click);
+    app.add_observer(populate_overlay_on_add);
+    app.add_systems(
+        Update,
+        (
+            refresh_context_menu,
+            close_context_menu_on_click,
+        )
+            .run_if(in_state(Screen::Gameplay)),
+    );
 }
 
-/// Which sub-menu the context menu is currently showing.
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ContextMenuMode {
     #[default]
@@ -45,458 +66,375 @@ pub enum ContextMenuType {
 }
 
 #[derive(Component)]
-pub struct WithContextMenu;
-
-pub trait ImmUiContextMenuExt {
-    fn context_menu(self, context_type: ContextMenuType, target: Entity) -> Self;
-}
-
-impl<Cap> ImmUiContextMenuExt for ImmEntity<'_, '_, '_, Cap>
-where
-    Cap: CapSet + ImplCap<CapabilityObserver>,
-{
-    fn context_menu(mut self, context_type: ContextMenuType, target: Entity) -> Self {
-        let has_menu = self
-            .cap_get_component::<WithContextMenu>()
-            .ok()
-            .flatten()
-            .is_some();
-
-        if !has_menu {
-            self.entity_commands().insert(WithContextMenu).observe(
-                move |trigger: On<Pointer<Click>>, mut state: ResMut<ContextMenuState>| {
-                    if trigger.event().button == PointerButton::Secondary {
-                        state.is_open = true;
-                        state.position = trigger.event().pointer_location.position;
-                        state.context_type = context_type;
-                        state.target = Some(target);
-                        state.mode = ContextMenuMode::Main;
-                    }
-                },
-            );
-        }
-        self
-    }
-}
-
-// --- Context Menu Overlay Rendering ---
-
-#[derive(Component)]
 pub struct ContextMenuOverlay;
 
-impl ImmediateAttach<CapsUi> for ContextMenuOverlay {
-    type Params = (
-        ResMut<'static, ContextMenuState>,
-        Query<'static, 'static, &'static CharacterInfo>,
-        Query<'static, 'static, (&'static LocationInfo, Option<&'static LocationResources>)>,
-        Res<'static, GameData>,
-        Res<'static, ResearchState>,
-        Res<'static, LocationRegistry>,
-    );
+// --- Click-handler marker components ----------------------------------------
 
-    fn construct(
-        ui: &mut Imm<CapsUi>,
-        params: &mut (
-            ResMut<ContextMenuState>,
-            Query<&CharacterInfo>,
-            Query<(&LocationInfo, Option<&LocationResources>)>,
-            Res<GameData>,
-            Res<ResearchState>,
-            Res<LocationRegistry>,
-        ),
-    ) {
-        let (menu_state, characters, locations, game_data, research_state, _location_registry) = (
-            &*params.0, &params.1, &params.2, &params.3, &params.4, &params.5,
-        );
+#[derive(Component)]
+struct ActionItemButton {
+    target: Entity,
+    action: Action,
+}
 
-        if !menu_state.is_open {
-            return;
+#[derive(Component)]
+struct ModeSwitchButton(ContextMenuMode);
+
+#[derive(Component)]
+struct ClearActionsItemButton(Entity);
+
+#[derive(Component)]
+struct ClearJobsItemButton(Entity);
+
+#[derive(Component)]
+struct CloseOnlyButton;
+
+// --- Observer systems for click handlers ------------------------------------
+
+fn action_item_on_click(
+    click: On<Pointer<Click>>,
+    q: Query<&ActionItemButton>,
+    mut action_query: Query<&mut ActionState>,
+    mut state: ResMut<ContextMenuState>,
+) {
+    if let Ok(marker) = q.get(click.entity) {
+        if let Ok(mut action_state) = action_query.get_mut(marker.target) {
+            action_state.queue_action(marker.action.clone());
         }
-
-        let pos = menu_state.position;
-        let context_type = menu_state.context_type;
-        let target = menu_state.target;
-        let mode = menu_state.mode;
-
-        // Get target name for header
-        let header_text = match (context_type, target) {
-            (ContextMenuType::Character, Some(entity)) => {
-                if let Ok(info) = characters.get(entity) {
-                    info.name.clone()
-                } else {
-                    "Character".to_string()
-                }
-            }
-            (ContextMenuType::Unit, _) => "Unit".to_string(),
-            (ContextMenuType::InventoryItem, _) => "Item".to_string(),
-            _ => "Menu".to_string(),
-        };
-
-        // Collect data needed for sub-menus before entering the closure
-        // Discovered locations for Travel
-        let discovered_locations: Vec<(String, String)> = locations
-            .iter()
-            .filter(|(info, _)| info.discovered)
-            .map(|(info, _)| (info.id.clone(), info.name.clone()))
-            .collect();
-
-        // Resource locations for Gather (discovered locations that have resources)
-        let gather_locations: Vec<(String, String, String)> = locations
-            .iter()
-            .filter(|(info, res)| info.discovered && res.is_some())
-            .filter_map(|(info, res)| {
-                let res = res?;
-                if res.resource_type.is_empty() || res.current_amount == 0 {
-                    return None;
-                }
-                Some((
-                    info.id.clone(),
-                    info.name.clone(),
-                    res.resource_type.clone(),
-                ))
-            })
-            .collect();
-
-        // Researchable techs
-        let researchable_techs: Vec<(String, String)> = game_data
-            .research
-            .values()
-            .filter(|def| research_state.can_research(&def.id, game_data))
-            .map(|def| (def.id.clone(), def.name.clone()))
-            .collect();
-
-        // Render the menu panel at the cursor position
-        ui.ch_id("context_menu")
-            .style(move |n: &mut Node| {
-                n.position_type = PositionType::Absolute;
-                n.left = Val::Px(pos.x);
-                n.top = Val::Px(pos.y);
-                n.min_width = Val::Px(180.0);
-                n.max_height = Val::Px(400.0);
-                n.flex_direction = FlexDirection::Column;
-                n.padding = UiRect::all(Val::Px(SPACE_1));
-            })
-            .bg(GRAY_800)
-            .border(1.0)
-            .border_color(GRAY_700)
-            .rounded(4.0)
-            .add(|ui| {
-                // Header
-                ui.ch()
-                    .label(&header_text)
-                    .text_size(13.0)
-                    .text_color(GRAY_100);
-
-                // Divider
-                menu_divider(ui);
-
-                // Menu items based on context type and mode
-                match context_type {
-                    ContextMenuType::Character => {
-                        if let Some(entity) = target {
-                            render_character_menu(
-                                ui,
-                                entity,
-                                &mode,
-                                &discovered_locations,
-                                &gather_locations,
-                                &researchable_techs,
-                            );
-                        }
-                    }
-                    ContextMenuType::Unit => {
-                        menu_item_close(ui, "Move");
-                        menu_item_close(ui, "Attack");
-                    }
-                    ContextMenuType::InventoryItem => {
-                        menu_item_close(ui, "Use");
-                        menu_item_close(ui, "Drop");
-                    }
-                    ContextMenuType::None => {}
-                }
-            });
+        state.is_open = false;
     }
 }
 
-fn render_character_menu(
-    ui: &mut Imm<CapsUi>,
+fn mode_switch_on_click(
+    click: On<Pointer<Click>>,
+    q: Query<&ModeSwitchButton>,
+    mut state: ResMut<ContextMenuState>,
+) {
+    if let Ok(marker) = q.get(click.entity) {
+        state.mode = marker.0;
+    }
+}
+
+fn clear_actions_item_on_click(
+    click: On<Pointer<Click>>,
+    q: Query<&ClearActionsItemButton>,
+    mut action_query: Query<&mut ActionState>,
+    mut state: ResMut<ContextMenuState>,
+) {
+    if let Ok(marker) = q.get(click.entity) {
+        if let Ok(mut action_state) = action_query.get_mut(marker.0) {
+            action_state.clear();
+        }
+        state.is_open = false;
+    }
+}
+
+fn clear_jobs_item_on_click(
+    click: On<Pointer<Click>>,
+    q: Query<&ClearJobsItemButton>,
+    mut action_query: Query<&mut ActionState>,
+    mut state: ResMut<ContextMenuState>,
+) {
+    if let Ok(marker) = q.get(click.entity) {
+        if let Ok(mut action_state) = action_query.get_mut(marker.0) {
+            action_state.clear_jobs();
+        }
+        state.is_open = false;
+    }
+}
+
+fn close_only_on_click(_: On<Pointer<Click>>, mut state: ResMut<ContextMenuState>) {
+    state.is_open = false;
+}
+
+// --- Lifecycle: spawn / refresh ---------------------------------------------
+
+fn populate_overlay_on_add(
+    add: On<Add, ContextMenuOverlay>,
+    mut commands: Commands,
+    state: Res<ContextMenuState>,
+    characters: Query<&CharacterInfo>,
+    locations: Query<(&LocationInfo, Option<&LocationResources>)>,
+    game_data: Res<GameData>,
+    research_state: Res<ResearchState>,
+) {
+    spawn_overlay_children(
+        &mut commands,
+        add.entity,
+        &state,
+        &characters,
+        &locations,
+        &game_data,
+        &research_state,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn refresh_context_menu(
+    mut commands: Commands,
+    overlay_q: Query<Entity, With<ContextMenuOverlay>>,
+    state: Res<ContextMenuState>,
+    characters: Query<&CharacterInfo>,
+    locations: Query<(&LocationInfo, Option<&LocationResources>)>,
+    game_data: Res<GameData>,
+    research_state: Res<ResearchState>,
+    _location_registry: Res<LocationRegistry>,
+) {
+    if !state.is_changed() && !game_data.is_changed() && !research_state.is_changed() {
+        return;
+    }
+    for overlay in &overlay_q {
+        commands.entity(overlay).despawn_related::<Children>();
+        spawn_overlay_children(
+            &mut commands,
+            overlay,
+            &state,
+            &characters,
+            &locations,
+            &game_data,
+            &research_state,
+        );
+    }
+}
+
+fn spawn_overlay_children(
+    commands: &mut Commands,
+    overlay: Entity,
+    state: &ContextMenuState,
+    characters: &Query<&CharacterInfo>,
+    locations: &Query<(&LocationInfo, Option<&LocationResources>)>,
+    game_data: &GameData,
+    research_state: &ResearchState,
+) {
+    if !state.is_open {
+        return;
+    }
+
+    let pos = state.position;
+    let context_type = state.context_type;
+    let target = state.target;
+    let mode = state.mode;
+
+    let header_text = match (context_type, target) {
+        (ContextMenuType::Character, Some(entity)) => characters
+            .get(entity)
+            .map(|info| info.name.clone())
+            .unwrap_or_else(|_| "Character".to_string()),
+        (ContextMenuType::Unit, _) => "Unit".to_string(),
+        (ContextMenuType::InventoryItem, _) => "Item".to_string(),
+        _ => "Menu".to_string(),
+    };
+
+    let discovered_locations: Vec<(String, String)> = locations
+        .iter()
+        .filter(|(info, _)| info.discovered)
+        .map(|(info, _)| (info.id.clone(), info.name.clone()))
+        .collect();
+
+    let gather_locations: Vec<(String, String, String)> = locations
+        .iter()
+        .filter(|(info, res)| info.discovered && res.is_some())
+        .filter_map(|(info, res)| {
+            let res = res?;
+            if res.resource_type.is_empty() || res.current_amount == 0 {
+                return None;
+            }
+            Some((info.id.clone(), info.name.clone(), res.resource_type.clone()))
+        })
+        .collect();
+
+    let researchable_techs: Vec<(String, String)> = game_data
+        .research
+        .values()
+        .filter(|def| research_state.can_research(&def.id, game_data))
+        .map(|def| (def.id.clone(), def.name.clone()))
+        .collect();
+
+    let mut panel = div()
+        .col()
+        .min_w(Val::Px(180.0))
+        .h(Val::Px(0.0)) // overridden by max_height below via Node insert
+        .p(px(SPACE_1))
+        .bg(GRAY_800)
+        .rounded(Val::Px(4.0))
+        .insert((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(pos.x),
+                top: Val::Px(pos.y),
+                min_width: Val::Px(180.0),
+                max_height: Val::Px(400.0),
+                flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(SPACE_1)),
+                ..default()
+            },
+            BorderColor::all(GRAY_700),
+        ))
+        .child(text(header_text).font_size(13.0).color(GRAY_100))
+        .child(menu_divider());
+
+    panel = match context_type {
+        ContextMenuType::Character => {
+            if let Some(entity) = target {
+                add_character_menu_items(
+                    panel,
+                    entity,
+                    mode,
+                    &discovered_locations,
+                    &gather_locations,
+                    &researchable_techs,
+                )
+            } else {
+                panel
+            }
+        }
+        ContextMenuType::Unit => panel
+            .child(close_only_item("Move"))
+            .child(close_only_item("Attack")),
+        ContextMenuType::InventoryItem => panel
+            .child(close_only_item("Use"))
+            .child(close_only_item("Drop")),
+        ContextMenuType::None => panel,
+    };
+
+    let panel_entity = panel.spawn(commands).id();
+    commands.entity(overlay).add_child(panel_entity);
+}
+
+// --- Menu builders ----------------------------------------------------------
+
+fn add_character_menu_items(
+    mut panel: Div,
     target_entity: Entity,
-    mode: &ContextMenuMode,
+    mode: ContextMenuMode,
     discovered_locations: &[(String, String)],
     gather_locations: &[(String, String, String)],
     researchable_techs: &[(String, String)],
-) {
+) -> Div {
     match mode {
         ContextMenuMode::Main => {
-            // Explore action
-            menu_item_action(ui, "Explore", target_entity, Action::Explore);
-
-            // Travel to... (opens sub-menu)
+            panel = panel.child(action_item("Explore", target_entity, Action::Explore));
             if !discovered_locations.is_empty() {
-                menu_item_mode(ui, "Travel to...", ContextMenuMode::Travel);
+                panel = panel.child(mode_switch_item("Travel to...", ContextMenuMode::Travel));
             }
-
-            // Gather at... (opens sub-menu)
             if !gather_locations.is_empty() {
-                menu_item_mode(ui, "Gather at...", ContextMenuMode::Gather);
+                panel = panel.child(mode_switch_item("Gather at...", ContextMenuMode::Gather));
             }
-
-            // Research... (opens sub-menu)
             if !researchable_techs.is_empty() {
-                menu_item_mode(ui, "Research...", ContextMenuMode::Research);
+                panel = panel.child(mode_switch_item("Research...", ContextMenuMode::Research));
             }
-
-            // Divider before destructive actions
-            menu_divider(ui);
-
-            // Clear Actions
-            {
-                let entity = target_entity;
-                ui.ch()
-                    .button()
-                    .w_full()
-                    .style(|n: &mut Node| {
-                        n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
-                    })
-                    .on_click_once(
-                        move |_: On<Pointer<Click>>,
-                              mut state: ResMut<ContextMenuState>,
-                              mut action_query: Query<&mut ActionState>| {
-                            if let Ok(mut action_state) = action_query.get_mut(entity) {
-                                action_state.clear();
-                            }
-                            state.is_open = false;
-                        },
-                    )
-                    .add(|ui| {
-                        ui.ch()
-                            .label("Clear Actions")
-                            .text_size(13.0)
-                            .text_color(GRAY_100);
-                    });
-            }
-
-            // Clear Jobs
-            {
-                let entity = target_entity;
-                ui.ch()
-                    .button()
-                    .w_full()
-                    .style(|n: &mut Node| {
-                        n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
-                    })
-                    .on_click_once(
-                        move |_: On<Pointer<Click>>,
-                              mut state: ResMut<ContextMenuState>,
-                              mut action_query: Query<&mut ActionState>| {
-                            if let Ok(mut action_state) = action_query.get_mut(entity) {
-                                action_state.clear_jobs();
-                            }
-                            state.is_open = false;
-                        },
-                    )
-                    .add(|ui| {
-                        ui.ch()
-                            .label("Clear Jobs")
-                            .text_size(13.0)
-                            .text_color(GRAY_100);
-                    });
-            }
+            panel = panel
+                .child(menu_divider())
+                .child(clear_actions_item(target_entity))
+                .child(clear_jobs_item(target_entity));
         }
-
         ContextMenuMode::Travel => {
-            // Back button
-            menu_item_mode(ui, "<- Back", ContextMenuMode::Main);
-            menu_divider(ui);
-
-            // List all discovered locations
+            panel = panel
+                .child(mode_switch_item("<- Back", ContextMenuMode::Main))
+                .child(menu_divider());
             for (loc_id, loc_name) in discovered_locations {
-                let entity = target_entity;
-                let destination = loc_id.clone();
-                let label = loc_name.clone();
-                ui.ch()
-                    .button()
-                    .w_full()
-                    .style(|n: &mut Node| {
-                        n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
-                    })
-                    .on_click_once(
-                        move |_: On<Pointer<Click>>,
-                              mut state: ResMut<ContextMenuState>,
-                              mut action_query: Query<&mut ActionState>| {
-                            if let Ok(mut action_state) = action_query.get_mut(entity) {
-                                action_state.queue_action(Action::Travel {
-                                    destination: destination.clone(),
-                                });
-                            }
-                            state.is_open = false;
-                        },
-                    )
-                    .add(|ui| {
-                        ui.ch().label(&label).text_size(13.0).text_color(GRAY_100);
-                    });
+                panel = panel.child(action_item(
+                    loc_name,
+                    target_entity,
+                    Action::Travel {
+                        destination: loc_id.clone(),
+                    },
+                ));
             }
         }
-
         ContextMenuMode::Gather => {
-            // Back button
-            menu_item_mode(ui, "<- Back", ContextMenuMode::Main);
-            menu_divider(ui);
-
-            // List all gatherable resource locations
+            panel = panel
+                .child(mode_switch_item("<- Back", ContextMenuMode::Main))
+                .child(menu_divider());
             for (loc_id, loc_name, resource) in gather_locations {
-                let entity = target_entity;
-                let location = loc_id.clone();
-                let res = resource.clone();
-                let label = format!("{} ({})", loc_name, resource);
-                ui.ch()
-                    .button()
-                    .w_full()
-                    .style(|n: &mut Node| {
-                        n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
-                    })
-                    .on_click_once(
-                        move |_: On<Pointer<Click>>,
-                              mut state: ResMut<ContextMenuState>,
-                              mut action_query: Query<&mut ActionState>| {
-                            if let Ok(mut action_state) = action_query.get_mut(entity) {
-                                action_state.queue_action(Action::Gather {
-                                    location: location.clone(),
-                                    resource: res.clone(),
-                                });
-                            }
-                            state.is_open = false;
-                        },
-                    )
-                    .add(|ui| {
-                        ui.ch().label(&label).text_size(13.0).text_color(GRAY_100);
-                    });
+                let label_text = format!("{} ({})", loc_name, resource);
+                panel = panel.child(action_item(
+                    &label_text,
+                    target_entity,
+                    Action::Gather {
+                        location: loc_id.clone(),
+                        resource: resource.clone(),
+                    },
+                ));
             }
         }
-
         ContextMenuMode::Research => {
-            // Back button
-            menu_item_mode(ui, "<- Back", ContextMenuMode::Main);
-            menu_divider(ui);
-
-            // List all researchable techs
+            panel = panel
+                .child(mode_switch_item("<- Back", ContextMenuMode::Main))
+                .child(menu_divider());
             for (tech_id, tech_name) in researchable_techs {
-                let entity = target_entity;
-                let tid = tech_id.clone();
-                let label = tech_name.clone();
-                ui.ch()
-                    .button()
-                    .w_full()
-                    .style(|n: &mut Node| {
-                        n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
-                    })
-                    .on_click_once(
-                        move |_: On<Pointer<Click>>,
-                              mut state: ResMut<ContextMenuState>,
-                              mut action_query: Query<&mut ActionState>| {
-                            if let Ok(mut action_state) = action_query.get_mut(entity) {
-                                action_state.queue_action(Action::Research {
-                                    tech_id: tid.clone(),
-                                });
-                            }
-                            state.is_open = false;
-                        },
-                    )
-                    .add(|ui| {
-                        ui.ch().label(&label).text_size(13.0).text_color(GRAY_100);
-                    });
+                panel = panel.child(action_item(
+                    tech_name,
+                    target_entity,
+                    Action::Research {
+                        tech_id: tech_id.clone(),
+                    },
+                ));
             }
         }
     }
+    panel
 }
 
-/// Menu item that queues an action on the target entity and closes the menu.
-fn menu_item_action(ui: &mut Imm<CapsUi>, label: &str, target_entity: Entity, action: Action) {
-    let label_owned = label.to_string();
-    ui.ch()
-        .button()
+fn action_item(label: &str, target: Entity, action: Action) -> Div {
+    div()
         .w_full()
-        .style(|n: &mut Node| {
-            n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
-        })
-        .on_click_once(
-            move |_: On<Pointer<Click>>,
-                  mut state: ResMut<ContextMenuState>,
-                  mut action_query: Query<&mut ActionState>| {
-                if let Ok(mut action_state) = action_query.get_mut(target_entity) {
-                    action_state.queue_action(action.clone());
-                }
-                state.is_open = false;
-            },
-        )
-        .add(|ui| {
-            ui.ch()
-                .label(&label_owned)
-                .text_size(13.0)
-                .text_color(GRAY_100);
-        });
+        .pad_x(px(SPACE_2))
+        .py(px(SPACE_1))
+        .insert(ActionItemButton { target, action })
+        .on_click(action_item_on_click)
+        .child(text(label.to_string()).font_size(13.0).color(GRAY_100))
 }
 
-/// Menu item that switches the context menu mode (for sub-menus).
-fn menu_item_mode(ui: &mut Imm<CapsUi>, label: &str, target_mode: ContextMenuMode) {
-    let label_owned = label.to_string();
-    ui.ch()
-        .button()
+fn mode_switch_item(label: &str, target_mode: ContextMenuMode) -> Div {
+    div()
         .w_full()
-        .style(|n: &mut Node| {
-            n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
-        })
-        .on_click_once(
-            move |_: On<Pointer<Click>>, mut state: ResMut<ContextMenuState>| {
-                state.mode = target_mode;
-            },
-        )
-        .add(|ui| {
-            ui.ch()
-                .label(&label_owned)
-                .text_size(13.0)
-                .text_color(GRAY_100);
-        });
+        .pad_x(px(SPACE_2))
+        .py(px(SPACE_1))
+        .insert(ModeSwitchButton(target_mode))
+        .on_click(mode_switch_on_click)
+        .child(text(label.to_string()).font_size(13.0).color(GRAY_100))
 }
 
-/// A simple close-only menu item (for non-character menus).
-fn menu_item_close(ui: &mut Imm<CapsUi>, label: &str) {
-    let label_owned = label.to_string();
-    ui.ch()
-        .button()
+fn clear_actions_item(entity: Entity) -> Div {
+    div()
         .w_full()
-        .style(|n: &mut Node| {
-            n.padding = UiRect::axes(Val::Px(SPACE_2), Val::Px(SPACE_1));
-        })
-        .on_click_once(
-            |_: On<Pointer<Click>>, mut state: ResMut<ContextMenuState>| {
-                state.is_open = false;
-            },
-        )
-        .add(|ui| {
-            ui.ch()
-                .label(&label_owned)
-                .text_size(13.0)
-                .text_color(GRAY_100);
-        });
+        .pad_x(px(SPACE_2))
+        .py(px(SPACE_1))
+        .insert(ClearActionsItemButton(entity))
+        .on_click(clear_actions_item_on_click)
+        .child(text("Clear Actions").font_size(13.0).color(GRAY_100))
 }
 
-/// Renders a horizontal divider line.
-fn menu_divider(ui: &mut Imm<CapsUi>) {
-    ui.ch().on_spawn_insert(|| {
-        (
-            Node {
-                height: Val::Px(1.0),
-                width: Val::Percent(100.0),
-                margin: UiRect::axes(Val::Px(SPACE_0), Val::Px(SPACE_1)),
-                ..default()
-            },
-            BackgroundColor(GRAY_700),
-        )
-    });
+fn clear_jobs_item(entity: Entity) -> Div {
+    div()
+        .w_full()
+        .pad_x(px(SPACE_2))
+        .py(px(SPACE_1))
+        .insert(ClearJobsItemButton(entity))
+        .on_click(clear_jobs_item_on_click)
+        .child(text("Clear Jobs").font_size(13.0).color(GRAY_100))
 }
 
-/// Close the context menu when the user left-clicks anywhere else.
+fn close_only_item(label: &str) -> Div {
+    div()
+        .w_full()
+        .pad_x(px(SPACE_2))
+        .py(px(SPACE_1))
+        .insert(CloseOnlyButton)
+        .on_click(close_only_on_click)
+        .child(text(label.to_string()).font_size(13.0).color(GRAY_100))
+}
+
+fn menu_divider() -> Div {
+    div()
+        .w_full()
+        .h(Val::Px(1.0))
+        .my(px(SPACE_1))
+        .bg(GRAY_700)
+}
+
+// --- Close-on-left-click anywhere -------------------------------------------
+
 fn close_context_menu_on_click(
     mouse: Res<ButtonInput<MouseButton>>,
     mut state: ResMut<ContextMenuState>,
