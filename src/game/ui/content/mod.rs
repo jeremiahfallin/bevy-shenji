@@ -29,11 +29,10 @@ pub(super) fn plugin(app: &mut App) {
         BevyImmediateAttachPlugin::<CapsUi, Content>::new(),
         BevyImmediateAttachPlugin::<CapsUi, CharacterInspector>::new(),
         BevyImmediateAttachPlugin::<CapsUi, ResearchView>::new(),
-        BevyImmediateAttachPlugin::<CapsUi, SquadsView>::new(),
         BevyImmediateAttachPlugin::<CapsUi, LocationsView>::new(),
         BevyImmediateAttachPlugin::<CapsUi, BuildingsView>::new(),
     ));
-    app.add_plugins((dashboard::plugin, characters::plugin));
+    app.add_plugins((dashboard::plugin, characters::plugin, squads::plugin));
 }
 
 #[derive(Component)]
