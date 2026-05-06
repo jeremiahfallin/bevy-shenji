@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "0.18", features = ["hotpatching", "experimental_bevy_ui_widgets"] }
+bevy = { version = "0.18", features = ["experimental_bevy_ui_widgets"] }
 bevy_declarative = { path = "../bevy_declarative" }
 lucide-icons = "0.563.0"
 
@@ -36,6 +36,9 @@ dev = [
     "bevy/track_location",
     # Enable Bevy Remote Protocol for visual capture and state inspection.
     "bevy/bevy_remote",
+    # Hot-reload Rust code in dev builds. Incompatible with release codegen
+    # (and with `bevy_dylib`'s exports), so it must stay scoped to dev.
+    "bevy/hotpatching",
 ]
 dev_native = [
     "dev",
