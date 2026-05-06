@@ -41,7 +41,7 @@ fn build_blueprint_on_click(
     game_data: Res<GameData>,
     mut base_inv: ResMut<BaseInventory>,
     mut action_query: Query<&mut ActionState>,
-    char_query: Query<(Entity, &CharacterInfo, &ActionState, &CharacterLocation)>,
+    char_query: Query<(Entity, &CharacterInfo, &CharacterLocation)>,
     mut notifications: ResMut<NotificationState>,
 ) {
     let Ok(marker) = q.get(click.entity) else {
@@ -60,14 +60,21 @@ fn build_blueprint_on_click(
         return;
     }
 
-    // Find an idle worker at base.
+    // Find an idle worker at base. Pull ActionState via the &mut query as
+    // an immutable read here; using a separate `&ActionState` query would
+    // conflict with `action_query` (B0001).
     let assignee: Option<(Entity, String)> = char_query
         .iter()
-        .find(|(_, _, action_state, loc)| {
-            loc.location_id == "base"
-                && matches!(&action_state.current_action, None | Some(Action::Idle))
+        .find(|(e, _, loc)| {
+            if loc.location_id != "base" {
+                return false;
+            }
+            action_query
+                .get(*e)
+                .map(|s| matches!(&s.current_action, None | Some(Action::Idle)))
+                .unwrap_or(false)
         })
-        .map(|(e, info, _, _)| (e, info.name.clone()));
+        .map(|(e, info, _)| (e, info.name.clone()));
     let Some((worker_entity, worker_name)) = assignee else {
         return;
     };
