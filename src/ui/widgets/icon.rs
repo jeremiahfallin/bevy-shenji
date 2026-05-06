@@ -1,15 +1,13 @@
 //! Icon widget — renders a Lucide glyph as a `TextEl`.
 //!
-//! Inserts the existing `crate::theme::widgets::icon::LucideIcon` marker so
-//! the theme's `apply_lucide_font` observer assigns the Lucide font. Phase C
-//! will move that observer + the marker into `src/ui/` once `src/theme/` is
-//! deleted.
+//! Inserts the [`LucideIcon`](crate::ui::lucide::LucideIcon) marker so the
+//! `apply_lucide_font` observer assigns the Lucide font.
 
 use bevy_declarative::prelude::*;
 
 use lucide_icons::Icon;
 
-use crate::theme::widgets::icon::LucideIcon;
+use crate::ui::lucide::LucideIcon;
 use crate::ui::tokens::palette::*;
 use crate::ui::tokens::typography::*;
 
