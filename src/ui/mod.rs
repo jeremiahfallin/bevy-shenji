@@ -1,7 +1,4 @@
 //! Shenji's design system, built on `bevy_declarative`.
-//!
-//! Replaces the older `bevy_immediate`-based `src/theme/` module. Both
-//! coexist during the migration; this module owns the post-port UI.
 
 #![allow(dead_code)]
 
