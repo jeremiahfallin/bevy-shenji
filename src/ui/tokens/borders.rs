@@ -1,7 +1,4 @@
 //! Border-width and border-radius design tokens.
-//!
-//! Ported verbatim from `crate::theme::styles::borders` for the
-//! bevy_declarative UI port. Phase C deletes the original.
 
 /// Border width constants for consistent border sizing across the UI.
 

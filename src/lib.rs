@@ -12,10 +12,9 @@ pub mod dev_tools;
 pub mod game;
 pub mod menus;
 pub mod screens;
-pub mod theme;
 pub mod ui;
 
-use crate::theme::prelude::*;
+use crate::ui::prelude::*;
 use bevy::{asset::AssetMetaCheck, prelude::*};
 use bevy_declarative::BevyDeclarativePlugin;
 
@@ -56,7 +55,6 @@ impl Plugin for AppPlugin {
             dev_tools::plugin,
             menus::plugin,
             screens::plugin,
-            theme::plugin,
             ui::plugin,
         ));
 

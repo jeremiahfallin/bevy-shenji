@@ -5,7 +5,7 @@
 //! rightmost skill column. The fix is structural: every row has the same
 //! fixed total width (sum of column widths), so the horizontal scroll
 //! container's content width is well-defined and the scrollbar can reach
-//! the end. The pre-migration layout fed bevy_immediate's `scrollarea`
+//! the end. The pre-migration layout fed an immediate-mode `scrollarea`
 //! children with no fixed width, leaving the scrollable content shorter
 //! than the visible row content.
 
