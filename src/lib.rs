@@ -3,7 +3,6 @@
 
 #![cfg_attr(bevy_lint, feature(register_tool), register_tool(bevy))]
 
-pub mod app_caps;
 pub mod asset_tracking;
 pub mod audio;
 #[cfg(feature = "dev")]
@@ -16,11 +15,9 @@ pub mod screens;
 pub mod theme;
 pub mod ui;
 
-use crate::app_caps::AppCaps;
 use crate::theme::prelude::*;
 use bevy::{asset::AssetMetaCheck, prelude::*};
 use bevy_declarative::BevyDeclarativePlugin;
-use bevy_immediate::BevyImmediatePlugin;
 
 pub struct AppPlugin;
 
@@ -46,7 +43,6 @@ impl Plugin for AppPlugin {
                     ..default()
                 }),
         )
-        .add_plugins(BevyImmediatePlugin::<AppCaps>::default())
         .add_plugins(BevyDeclarativePlugin);
 
         // Add other plugins.
