@@ -100,9 +100,6 @@ impl Plugin for AppPlugin {
             .id();
         app.insert_resource(UiRoot(root));
 
-        // Configure theme interaction sounds.
-        app.add_systems(Startup, configure_theme_sounds);
-
         // Spawn the main camera.
         app.add_systems(Startup, spawn_camera);
     }
@@ -132,11 +129,6 @@ pub struct PausableSystems;
 /// The root UI entity that all screens attach their UI to.
 #[derive(Resource)]
 pub struct UiRoot(pub Entity);
-
-fn configure_theme_sounds(asset_server: Res<AssetServer>, mut theme_config: ResMut<ThemeConfig>) {
-    theme_config.hover_sound = Some(asset_server.load("audio/sound_effects/button_hover.ogg"));
-    theme_config.click_sound = Some(asset_server.load("audio/sound_effects/button_click.ogg"));
-}
 
 fn spawn_camera(mut commands: Commands) {
     commands.spawn((Name::new("Camera"), Camera2d));
